@@ -11,7 +11,7 @@ def main():
     arg_parser.add_argument('yaml_file', help='Source YAML')
 
     arg_parser.add_argument(
-        '--path',
+        '--path', '-p',
         help='Path to SSH config file if it differs from {}'.format(default_path),
         default=default_path
     )
@@ -24,7 +24,15 @@ def main():
     ))
 
     yaml_obj = read_file(args.yaml_file)
-    process_yaml(yaml_obj)
+    config_file_contents = process_yaml(yaml_obj)
+
+    with open(args.path, 'w') as fh:
+        try:
+            fh.write(config_file_contents)
+            fh.write("\n")
+            print('{} written successfully'.format(args.path))
+        except IOError:
+            exit(1)
 
 
 if __name__ == '__main__':
