@@ -31,7 +31,8 @@ def main():
             fh.write(config_file_contents)
             fh.write("\n")
             print('{} written successfully'.format(args.path))
-        except IOError:
+        except IOError as exc:
+            print(exc.strerror)
             exit(1)
 
 
