@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='sshush',
-      version='0.1',
+      version='1.0.0',
       description='SSH Config management tool',
       url='http://github.com/bencromwell/sshush',
       author='Ben Cromwell',
