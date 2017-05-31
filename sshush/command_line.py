@@ -26,14 +26,14 @@ def main():
     yaml_obj = read_file(args.yaml_file)
     config_file_contents = process_yaml(yaml_obj)
 
-    with open(args.path, 'w') as fh:
-        try:
+    try:
+        with open(args.path, 'w') as fh:
             fh.write(config_file_contents)
             fh.write("\n")
             print('{} written successfully'.format(args.path))
-        except IOError as exc:
-            print(exc.strerror)
-            exit(1)
+    except IOError as exc:
+        print('Error:', exc.strerror)
+        exit(1)
 
 
 if __name__ == '__main__':
