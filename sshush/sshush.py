@@ -23,7 +23,7 @@ def process_yaml(ssh_config_yaml):
         settings = {**defaults, **item}
 
         for reference, host_details in hosts.items():
-            output.append(reference)
+            output.append('Host {}'.format(reference))
             host_settings = {**settings, **host_details}
 
             for k, v in host_settings.items():
