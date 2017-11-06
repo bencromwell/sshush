@@ -1,0 +1,26 @@
+---
+foo_bar:
+  Config:
+    IdentityFile: ~/.ssh/foobar.pem
+    User: ubuntu
+  Hosts:
+    foo_bar_aws:
+      HostName: 1.2.3.4
+
+private_foos:
+  Extends: foo_bar
+  Config:
+    ProxyCommand: ssh foo_bar_aws nc %h %p 2> /dev/null
+  Hosts:
+    foobar-0: 10.25.0.1
+    foobar-1: 10.25.0.2
+    foobar-2: 10.25.0.3
+    foobar-3: 10.25.0.4
+
+debian_nodes:
+  Extends: private_foos
+  Config:
+    User: admin
+  Hosts:
+   foobar-vpn0: 10.25.0.100
+   foobar-vpn1: 10.25.0.101
