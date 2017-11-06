@@ -64,3 +64,11 @@ work:
     jenkins: 10.0.0.20
 
 ```
+
+#### Installation
+
+Using python, run:
+
+```
+$ python3 setup.py install
+```
