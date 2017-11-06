@@ -31,41 +31,36 @@ default:
   IdentityFile: ~/.ssh/id_rsa
 
 web_servers:
-  Port: 2201
-  IdentityFile: ~/.ssh/digital_ocean
+  Config:
+    Port: 2201
+    IdentityFile: ~/.ssh/digital_ocean
   Hosts:
-    projects-do-1:
-      HostName: projects-do-1.example.com
-    projects-do-2:
-      HostName: projects-do-2.example.com
+    projects-do-1: projects-do-1.example.com
+    projects-do-2: projects-do-2.example.com
     projects-aws:
       HostName: projects-aws.example.com
       IdentityFile: ~/.ssh/aws
 
 raspberry_pis:
-  User: pi
+  Config:
+    User: pi
   Hosts:
-    pi1:
-      HostName: 192.168.0.107
-    pi2:
-      HostName: 192.168.0.108
+    pi1: 192.168.0.107
+    pi2: 192.168.0.108
 
 local:
   Hosts:
     router:
       HostName: 192.168.0.1
       User: root
-    kodi:
-      HostName: 192.168.0.200
+    kodi: 192.168.0.200
 
 work:
-  User: bcromwell
+  Config:
+    User: bcromwell
   Hosts:
-    workpc:
-      HostName: 10.0.0.80
-    gitlab:
-      HostName: 10.0.0.30
-    jenkins:
-      HostName: 10.0.0.20
+    workpc: 10.0.0.80
+    gitlab: 10.0.0.30
+    jenkins: 10.0.0.20
 
 ```
