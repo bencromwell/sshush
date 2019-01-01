@@ -49,6 +49,26 @@ def process_yaml(ssh_config_yaml):
 
         configs[identifier] = settings
 
+        # ugly remapping to handle a list of hosts
+        # as per the ciscos.yml example
+        # ciscos:
+        #   Config:
+        #     Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+        #     KexAlgorithms: +diffie-hellman-group1-sha1
+        #     HostKeyAlgorithms: ssh-rsa,ssh-dss
+        #     PubkeyAuthentication: "no"
+        #   Hosts:
+        #     - fooas*.adm
+        #     - foocs*.adm
+        #     - foocr01.adm
+        #     - cs*.foo.adm
+        #
+        if isinstance(hosts, (list,)):
+            tmp_hosts = hosts
+            hosts = {}
+            for host in tmp_hosts:
+                hosts[host] = host
+
         for reference, host_details in hosts.items():
             output.append('Host {}'.format(reference))
 
