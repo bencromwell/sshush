@@ -77,8 +77,6 @@ def process_yaml(ssh_config_yaml):
                 host_details = {
                     'HostName': host_details
                 }
-            else:
-                host_details = {}
 
             host_settings = {**settings, **host_details}
 
