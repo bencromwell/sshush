@@ -73,7 +73,9 @@ def process_yaml(ssh_config_yaml):
             output.append('Host {}'.format(reference))
 
             # if it's a string then it's a straight reference to IP or hostname mapping
-            if isinstance(host_details, str) and not host_details.__contains__('*'):
+            if host_details.__contains__('*'):
+                host_details = {}
+            elif isinstance(host_details, str):
                 host_details = {
                     'HostName': host_details
                 }
