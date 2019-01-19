@@ -27,77 +27,86 @@ def read_file(file):
         #     print(e)
 
 
-def process_yaml(ssh_config_yaml):
-    output = []
+class Parser:
+    global_values = {}
 
-    defaults = extract_section('default', ssh_config_yaml, {})
-    global_values = extract_section('global', ssh_config_yaml)
+    def process_yaml(self, ssh_config_yaml):
+        output = []
 
-    configs = {}
+        defaults = self.extract_section('default', ssh_config_yaml, {})
+        globals_in_file = self.extract_section('global', ssh_config_yaml)
 
-    for identifier, item in ssh_config_yaml.items():
-        output.append('# {}'.format(identifier))
-        hosts = item['Hosts']
+        if globals_in_file is not None:
+            self.global_values = {**self.global_values, **globals_in_file}
 
-        if 'Config' not in item:
-            item['Config'] = {}
+        configs = {}
 
-        if 'Extends' in item and item['Extends'] in configs:
-            settings = {**defaults, **configs[item['Extends']], **item['Config']}
-        else:
-            settings = {**defaults, **item['Config']}
+        for identifier, item in ssh_config_yaml.items():
+            output.append('# {}'.format(identifier))
+            hosts = item['Hosts']
 
-        configs[identifier] = settings
+            if 'Config' not in item:
+                item['Config'] = {}
 
-        # ugly remapping to handle a list of hosts
-        # as per the ciscos.yml example
-        # ciscos:
-        #   Config:
-        #     Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
-        #     KexAlgorithms: +diffie-hellman-group1-sha1
-        #     HostKeyAlgorithms: ssh-rsa,ssh-dss
-        #     PubkeyAuthentication: "no"
-        #   Hosts:
-        #     - fooas*.adm
-        #     - foocs*.adm
-        #     - foocr01.adm
-        #     - cs*.foo.adm
-        #
-        if isinstance(hosts, (list,)):
-            tmp_hosts = hosts
-            hosts = {}
-            for host in tmp_hosts:
-                hosts[host] = host
+            if 'Extends' in item and item['Extends'] in configs:
+                settings = {**defaults, **configs[item['Extends']], **item['Config']}
+            else:
+                settings = {**defaults, **item['Config']}
 
-        for reference, host_details in hosts.items():
-            output.append('Host {}'.format(reference))
+            configs[identifier] = settings
 
-            # if it's a string then it's a straight reference to IP or hostname mapping
-            if host_details.__contains__('*'):
-                host_details = {}
-            elif isinstance(host_details, str):
-                host_details = {
-                    'HostName': host_details
-                }
+            # ugly remapping to handle a list of hosts
+            # as per the ciscos.yml example
+            # ciscos:
+            #   Config:
+            #     Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+            #     KexAlgorithms: +diffie-hellman-group1-sha1
+            #     HostKeyAlgorithms: ssh-rsa,ssh-dss
+            #     PubkeyAuthentication: "no"
+            #   Hosts:
+            #     - fooas*.adm
+            #     - foocs*.adm
+            #     - foocr01.adm
+            #     - cs*.foo.adm
+            #
+            if isinstance(hosts, (list,)):
+                tmp_hosts = hosts
+                hosts = {}
+                for host in tmp_hosts:
+                    hosts[host] = host
 
-            host_settings = {**settings, **host_details}
+            for reference, host_details in hosts.items():
+                output.append('Host {}'.format(reference))
 
-            for k, v in host_settings.items():
-                output.append('    {} {}'.format(k, v))
+                # if it's a string then it's a straight reference to IP or hostname mapping
+                if host_details.__contains__('*'):
+                    host_details = {}
+                elif isinstance(host_details, str):
+                    host_details = {
+                        'HostName': host_details
+                    }
 
-            output.append("")
+                host_settings = {**settings, **host_details}
 
-    if global_values is not None:
-        output.append('Host *')
-        for key, value in global_values.items():
-            output.append('    {} {}'.format(key, value))
+                for k, v in host_settings.items():
+                    output.append('    {} {}'.format(k, v))
 
-    return "\n".join(output)
+                output.append("")
 
+        return "\n".join(output)
 
-def extract_section(section_name, ssh_config, default_to = None):
-    if section_name in ssh_config:
-        default_to = ssh_config[section_name]
-        del ssh_config[section_name]
+    def output_global_config(self):
+        output = []
+        if self.global_values is not None:
+            output.append('Host *')
+            for key, value in self.global_values.items():
+                output.append('    {} {}'.format(key, value))
 
-    return default_to
+        return "\n".join(output)
+
+    def extract_section(self, section_name, ssh_config, default_to = None):
+        if section_name in ssh_config:
+            default_to = ssh_config[section_name]
+            del ssh_config[section_name]
+
+        return default_to
