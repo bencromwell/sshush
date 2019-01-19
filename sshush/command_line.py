@@ -1,8 +1,10 @@
 import argparse
 import sys
 import pkg_resources
-from os.path import expanduser
+from os.path import expanduser, isfile
 from sshush.sshush import read_file, Parser
+
+GLOBAL_DEFAULT_CONFIG_PATH = '/etc/default/sshush'
 
 
 def main():
@@ -25,6 +27,9 @@ def main():
     )
 
     args = arg_parser.parse_args()
+
+    if isfile(GLOBAL_DEFAULT_CONFIG_PATH):
+        args.source.append(GLOBAL_DEFAULT_CONFIG_PATH)
 
     print('sshush running with path "{path}" and source YAML "{yaml}"'.format(
         path=args.path,
