@@ -67,6 +67,12 @@ work:
 
 #### Installation
 
+Direct from pip:
+
+`pip3 install sshush`
+
+Or when checking out the project:
+
 Using python, run:
 
 ```
