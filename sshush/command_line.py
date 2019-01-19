@@ -12,6 +12,12 @@ def main():
     arg_parser = argparse.ArgumentParser()
 
     arg_parser.add_argument(
+        '--version', '-v',
+        action='version',
+        version=pkg_resources.require('sshush')[0].version
+    )
+
+    arg_parser.add_argument(
         '--source', '-s',
         help='Path to source YAML file if it differs from {}'.format(default_yaml_path),
         default=[default_yaml_path],
