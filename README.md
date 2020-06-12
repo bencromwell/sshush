@@ -78,3 +78,9 @@ Using python, run:
 ```
 $ python3 setup.py install
 ```
+
+#### Documentation
+
+I've not gottend around to full documentation yet but you can find a detailed overview of options and the resultant config it generates on my website:
+
+https://bencromwell.co.uk/sshush/
