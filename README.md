@@ -1,5 +1,11 @@
 # sshush
 
+## Documentation
+
+Full docs can be found here: https://sshush.bencromwell.com
+
+## Intro
+
 Takes a YAML defined set of SSH configs and produces an SSH config file from it.
 
 Defaults to `~/.ssh/config.yml` for the source and `~/.ssh/config` for the destination.
@@ -78,9 +84,3 @@ Using python, run:
 ```
 $ python3 setup.py install
 ```
-
-#### Documentation
-
-I've not gotten around to full documentation yet but you can find a detailed overview of options and the resultant config it generates on my website:
-
-https://bencromwell.co.uk/sshush/
