@@ -1,3 +1,4 @@
+import re
 import yaml
 from collections import OrderedDict
 
@@ -21,10 +22,7 @@ def ordered_load(stream, loader=yaml.Loader, object_pairs_hook=OrderedDict):
 
 def read_file(file):
     with open(file, 'r') as stream:
-        # try:
-            return ordered_load(stream, yaml.SafeLoader)
-        # except yaml.YAMLError as e:
-        #     print(e)
+        return ordered_load(stream, yaml.SafeLoader)
 
 
 class Parser:
@@ -89,6 +87,9 @@ class Parser:
                 host_settings = {**settings, **host_details}
 
                 for k, v in host_settings.items():
+                    suffix = re.search(r'-\d+$', k)
+                    if suffix:
+                        k = k.rstrip(suffix.group()) 
                     output.append('    {} {}'.format(k, v))
 
                 output.append("")
@@ -100,6 +101,9 @@ class Parser:
         if self.global_values is not None:
             output.append('Host *')
             for key, value in self.global_values.items():
+                suffix = re.search(r'-\d+$', key)
+                if suffix:
+                    key = key.rstrip(suffix.group()) 
                 output.append('    {} {}'.format(key, value))
 
         return "\n".join(output)

@@ -18,6 +18,8 @@ web_servers:
     projects-aws:
       HostName: projects-aws.example.com
       IdentityFile: ~/.ssh/aws
+      LocalForward-1: 8080 127.0.0.1:80
+      LocalForward-2: 8443 127.0.0.1:443
 
 raspberry_pis:
   Config:
