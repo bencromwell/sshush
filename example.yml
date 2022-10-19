@@ -7,15 +7,16 @@ default:
   IdentityFile: ~/.ssh/id_rsa
 
 web_servers:
+  Prefix: projects-
   Config:
     Port: 2201
     IdentityFile: ~/.ssh/digital_ocean
   Hosts:
-    projects-do-1:
+    do-1:
       HostName: projects-do-1.example.com
-    projects-do-2:
+    do-2:
       HostName: projects-do-2.example.com
-    projects-aws:
+    aws:
       HostName: projects-aws.example.com
       IdentityFile: ~/.ssh/aws
 
