@@ -27,7 +27,7 @@ def main():
     )
 
     arg_parser.add_argument(
-        '--path', '-p',
+        '--path', '-p', '-o', '--output',
         help='Path to SSH config file if it differs from {}'.format(default_path),
         default=default_path
     )
