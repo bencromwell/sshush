@@ -28,6 +28,17 @@ raspberry_pis:
       HostName: 192.168.0.107
     pi2:
       HostName: 192.168.0.108
+      LocalForward:
+        - 8080 127.0.0.1:80
+        - 8443 127.0.0.1:443
+
+list_config_test_case:
+  Config:
+    LocalForward:
+      - 8080 127.0.0.1:80
+      - 8443 127.0.0.1:443
+  Hosts:
+    lf_test_1: 192.168.0.109
 
 local:
   Hosts:
