@@ -76,6 +76,9 @@ class Parser:
                     hosts[host] = host
 
             for reference, host_details in hosts.items():
+                if 'Prefix' in item:
+                    reference = item['Prefix'] + reference
+
                 output.append('Host {}'.format(reference))
 
                 # if it's a string then it's a straight reference to IP or hostname mapping
