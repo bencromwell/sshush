@@ -92,7 +92,11 @@ class Parser:
                 host_settings = {**settings, **host_details}
 
                 for k, v in host_settings.items():
-                    output.append('    {} {}'.format(k, v))
+                    if isinstance(v, list):
+                        for i in v:
+                            output.append('    {} {}'.format(k, i))
+                    else:
+                        output.append('    {} {}'.format(k, v))
 
                 output.append("")
 
