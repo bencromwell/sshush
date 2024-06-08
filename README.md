@@ -73,14 +73,8 @@ work:
 
 #### Installation
 
-Direct from pip:
+Grab a release from the GitHub releases page.
 
-`pip3 install sshush`
+### Notes
 
-Or when checking out the project:
-
-Using python, run:
-
-```
-$ python3 setup.py install
-```
+This was originally written in Python, which can be found in the 1.x branch.
