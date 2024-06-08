@@ -1,0 +1,13 @@
+alice:
+  Extends: bob
+  Config:
+    User: alice
+  Hosts:
+    - alice.example.com
+
+bob:
+  Extends: alice
+  Config:
+    User: bob
+  Hosts:
+    - bob.example.com

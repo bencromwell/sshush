@@ -1,0 +1,27 @@
+---
+ciscos:
+  Config:
+    Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+    KexAlgorithms: +diffie-hellman-group1-sha1
+    HostKeyAlgorithms: ssh-rsa,ssh-dss
+    PubkeyAuthentication: "no"
+  Hosts:
+    - oldas*.adm
+    - oldcs*.adm
+    - cs1.office.adm
+    - cs2.office.adm
+    - ms1.office.adm
+    - as1.office.adm
+    - as2.office.adm
+    - as3.office.adm
+    - as4.office.adm
+    - ps1.office.adm
+    - ps2.office.adm
+
+older_ciscos:
+  Extends: ciscos
+  Config:
+    Ciphers: aes128-cbc,3des-cbc,aes192-cbc,aes256-cbc
+  Hosts:
+    - es*.office.adm
+    - cr1.office2.adm
