@@ -1,0 +1,17 @@
+---
+global:
+  UseRoaming: "no"
+
+default:
+  User: ben
+  IdentityFile: ~/.ssh/id_rsa
+
+web_servers:
+  Prefix: projects-
+  Config:
+    Port: 2201
+    IdentityFile: ~/.ssh/digital_ocean
+  Hosts:
+    aws:
+      HostName: projects-aws.example.com
+      IdentityFile: ~/.ssh/aws
