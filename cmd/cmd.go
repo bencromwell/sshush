@@ -68,8 +68,9 @@ func NewRootCommand(version, commit string) *cobra.Command {
 
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			debug, _ := cmd.Flags().GetBool("debug")
+			dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-			err := runner.Run(verbose, debug, version)
+			err := runner.Run(verbose, debug, dryRun, version)
 			must(err)
 		},
 	}
@@ -81,6 +82,7 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	cmd.PersistentFlags().String("dest", homeDir+"/.ssh/config", "the destination path to write to")
 	cmd.PersistentFlags().BoolP("verbose", "V", false, "verbose output")
 	cmd.PersistentFlags().Bool("debug", false, "debug output")
+	cmd.PersistentFlags().Bool("dry-run", false, "print diff with current file instead of writing")
 
 	must(viper.BindPFlag("source", cmd.PersistentFlags().Lookup("source")))
 	must(viper.BindPFlag("dest", cmd.PersistentFlags().Lookup("dest")))
