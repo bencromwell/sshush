@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/k0kubun/pp/v3"
-	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/mongodb-forks/go-difflib/difflib"
 )
 
 type (
@@ -60,16 +60,22 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 	output = removeTrailingEmptyLine(output)
 	newConfig := slices.Concat(headers, output)
 
-	config := ""
 	if dryRun {
 		c, err := os.ReadFile(s.Destination)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("reading destination file: %w", err)
 		}
-		lines := strings.Split(string(c), "\n")
-		config = strings.Join(removeTrailingEmptyLine(lines), "\n")
+		oldConfig := ""
+		if !os.IsNotExist(err) {
+			lines := strings.Split(string(c), "\n")
+			oldConfig = strings.Join(removeTrailingEmptyLine(lines), "\n")
+		}
 
-		fmt.Println(PrettyFileDiff(config, strings.Join(newConfig, "\n"), verbose))
+		diff, err := PrettyDiff(oldConfig, strings.Join(newConfig, "\n"), s.Destination)
+		if err != nil {
+			return fmt.Errorf("creating diff: %w", err)
+		}
+		fmt.Println(diff)
 	} else {
 		fh, err := os.Create(s.Destination)
 		if err != nil {
@@ -90,29 +96,17 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 	return nil
 }
 
-// PrettyFileDiff takes the content of two files and returns the pretty diff
-func PrettyFileDiff(s1, s2 string, verbose bool) string {
-	dmp := diffmatchpatch.New()
-	wSrc, wDst, warray := dmp.DiffLinesToRunes(s1, s2)
-	diffs := dmp.DiffMainRunes(wSrc, wDst, false)
-	diffs = dmp.DiffCharsToLines(diffs, warray)
-	var newDiffs []diffmatchpatch.Diff
-	if verbose {
-		newDiffs = diffs
-	} else {
-		// only select different lines to limit output
-		for _, item := range diffs {
-			if item.Type != diffmatchpatch.DiffEqual {
-				newDiffs = append(newDiffs, item)
-			}
-		}
+// PrettyDiff compares two strings and returns a colored diff.
+func PrettyDiff(old, new, file string) (string, error) {
+	diff := difflib.LineDiffParams{
+		A:        difflib.SplitLines(old),
+		B:        difflib.SplitLines(new),
+		FromFile: fmt.Sprintf("%s (Old)", file),
+		ToFile:   fmt.Sprintf("%s (New)", file),
+		Context:  3,
+		Colored:  true,
 	}
-
-	if len(newDiffs) > 1 {
-		return dmp.DiffPrettyText(newDiffs)
-	} else {
-		return ""
-	}
+	return difflib.GetUnifiedDiffString(diff)
 }
 
 // writeLines writes a map of lines to the file handle.
