@@ -205,11 +205,16 @@ func (p *Parser) processConfigMap(
 			return nil, err
 		}
 
-		keys := sortMapByKeys(hosts.(map[string]any))
+		hostsMap, hostsOk := hosts.(map[string]any)
+		if !hostsOk {
+			return nil, fmt.Errorf("%w: %s", ErrHostsNotListOfStrings, hosts)
+		}
+
+		keys := sortMapByKeys(hostsMap)
 
 		// Process hosts in the sorted order of their keys.
 		for _, host := range keys {
-			hostConfig := getHostConfig(hosts.(map[string]any)[host], groupConfig)
+			hostConfig := getHostConfig(hostsMap[host], groupConfig)
 
 			if p.Debug {
 				_, _ = pp.Println("Host config: ", hostConfig)
@@ -253,7 +258,11 @@ func (p *Parser) getGroupConfig(configMap map[string]any) map[string]any {
 
 	// If we have config for this specific group, add that in.
 	if config, ok := configMap["Config"]; ok {
-		groupConfig = mergeMaps(groupConfig, config.(map[string]any))
+		//nolint:errcheck,forcetypeassert // We don't return an error from this func, so for the
+		// moment until we can add some test cases around bad config, ignore the
+		// linter's warning.
+		m := config.(map[string]any)
+		groupConfig = mergeMaps(groupConfig, m)
 	}
 
 	return groupConfig
