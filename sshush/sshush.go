@@ -1,7 +1,9 @@
 package sshush
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"slices"
@@ -17,10 +19,18 @@ type (
 	Runner struct {
 		Sources     sshConfigSources
 		Destination string
+		Out         io.Writer
 	}
 )
 
+var (
+	ErrLoadingSources  = errors.New("loading sources")
+	ErrProducingConfig = errors.New("producing config")
+)
+
 func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) error {
+	pp.SetDefaultOutput(s.Out)
+
 	if verbose {
 		slog.Info(
 			"sshush v"+version+" running with",
@@ -37,12 +47,12 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 
 	err := parser.Load(&s.Sources)
 	if err != nil {
-		return fmt.Errorf("loading sources: %w", err)
+		return fmt.Errorf("%w: %w", ErrLoadingSources, err)
 	}
 
 	output, err := parser.ProduceConfig()
 	if err != nil {
-		return fmt.Errorf("producing config: %w", err)
+		return fmt.Errorf("%w: %w", ErrProducingConfig, err)
 	}
 
 	if debug {
@@ -115,7 +125,10 @@ func (s *Runner) dryRun(newConfig []string) error {
 		return fmt.Errorf("creating diff: %w", err)
 	}
 
-	fmt.Println(diff)
+	_, err = fmt.Fprintln(s.Out, diff)
+	if err != nil {
+		return fmt.Errorf("writing diff to output: %w", err)
+	}
 
 	return nil
 }

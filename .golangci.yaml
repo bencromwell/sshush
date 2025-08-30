@@ -340,7 +340,7 @@ linters:
     - errorlint
     - exhaustive
     - exptostd
-#    - forbidigo
+    - forbidigo
     - forcetypeassert
     - funlen
     - gocheckcompilerdirectives
