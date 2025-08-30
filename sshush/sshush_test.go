@@ -46,20 +46,20 @@ func TestFunctional(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
 			sshushRunner := &sshush.Runner{
-				Sources:     tc.sources,
-				Destination: filepath.Join("testdata", tc.destination),
+				Sources:     testCase.sources,
+				Destination: filepath.Join("testdata", testCase.destination),
 			}
 
 			err := sshushRunner.Run(true, true, false, "0.0.0-dev")
 			require.NoError(t, err)
 
-			generatedContents := string(golden.Get(t, tc.destination))
-			golden.Assert(t, generatedContents, tc.goldenFile)
+			generatedContents := string(golden.Get(t, testCase.destination))
+			golden.Assert(t, generatedContents, testCase.goldenFile)
 		})
 	}
 }

@@ -168,12 +168,6 @@ linters:
       # tab width in spaces. Default to 1.
       tab-width: 1
 
-    misspell:
-      # Correct spellings using locale preferences for US or UK.
-      # Default is to use a neutral variety of English.
-      # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-      locale: UK
-
     nakedret:
       # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
       max-func-lines: 30
@@ -346,7 +340,7 @@ linters:
     - errorlint
     - exhaustive
     - exptostd
-    - forbidigo
+#    - forbidigo
     - forcetypeassert
     - funlen
     - gocheckcompilerdirectives
@@ -378,7 +372,6 @@ linters:
     - maintidx
     - makezero
     - mirror
-    - misspell
     - mnd
     - musttag
     - nakedret

@@ -30,7 +30,7 @@ func expandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("getting home dir: %w", err)
 		}
 
 		path = filepath.Join(homeDir, path[1:])
@@ -68,11 +68,14 @@ func NewRootCommand(version, commit string) *cobra.Command {
 				Destination: dest,
 			}
 
-			verbose, _ := cmd.Flags().GetBool("verbose")
-			debug, _ := cmd.Flags().GetBool("debug")
-			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			verbose, err := cmd.Flags().GetBool("verbose")
+			must(err)
+			debug, err := cmd.Flags().GetBool("debug")
+			must(err)
+			dryRun, err := cmd.Flags().GetBool("dry-run")
+			must(err)
 
-			err := runner.Run(verbose, debug, dryRun, version)
+			err = runner.Run(verbose, debug, dryRun, version)
 			must(err)
 		},
 	}
