@@ -198,51 +198,60 @@ func (p *Parser) processConfigMap(
 		_, _ = pp.Println("Group config: ", groupConfig)
 	}
 
-	if hosts, ok := configMap["Hosts"]; ok {
-		// If it's a direct list of hosts, rearrange things.
-		err = expandListToMapOfHosts(configMap, &hosts)
-		if err != nil {
-			return nil, err
+	hosts, ok := configMap["Hosts"]
+	if !ok {
+		return output, nil
+	}
+
+	// If it's a direct list of hosts, rearrange things.
+	err = expandListToMapOfHosts(configMap, &hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	hostsMap, hostsOk := hosts.(map[string]any)
+	if !hostsOk {
+		return nil, fmt.Errorf("%w: %s", ErrHostsNotListOfStrings, hosts)
+	}
+
+	keys := sortMapByKeys(hostsMap)
+
+	// Process hosts in the sorted order of their keys.
+	for _, host := range keys {
+		hostConfig := getHostConfig(hostsMap[host], groupConfig)
+
+		if p.Debug {
+			_, _ = pp.Println("Host config: ", hostConfig)
 		}
 
-		hostsMap, hostsOk := hosts.(map[string]any)
-		if !hostsOk {
-			return nil, fmt.Errorf("%w: %s", ErrHostsNotListOfStrings, hosts)
-		}
-
-		keys := sortMapByKeys(hostsMap)
-
-		// Process hosts in the sorted order of their keys.
-		for _, host := range keys {
-			hostConfig := getHostConfig(hostsMap[host], groupConfig)
-
-			if p.Debug {
-				_, _ = pp.Println("Host config: ", hostConfig)
-			}
-
-			output = append(output, fmt.Sprintf("Host %s%s", prefix, host))
-
-			// Hoist HostName to the top.
-			hostName := hostConfig["HostName"]
-			delete(hostConfig, "HostName")
-
-			if hostName != nil {
-				output = appendLineToOutput(output, "HostName", hostName)
-			}
-
-			hostConfigKeys := sortMapByKeys(hostConfig)
-
-			// Process the host config in the sorted order of its keys.
-			for _, k := range hostConfigKeys {
-				v := hostConfig[k]
-				output = appendConfigToOutput(output, k, v)
-			}
-
-			output = append(output, "")
-		}
+		output = append(output, fmt.Sprintf("Host %s%s", prefix, host))
+		output = append(output, p.makeHostConfig(hostConfig)...)
+		output = append(output, "")
 	}
 
 	return output, nil
+}
+
+// makeHostConfig produces the config block for the given host configuration.
+func (p *Parser) makeHostConfig(hostConfig map[string]any) []string {
+	var output []string
+
+	// Hoist HostName to the top.
+	hostName := hostConfig["HostName"]
+	delete(hostConfig, "HostName")
+
+	if hostName != nil {
+		output = appendLineToOutput(output, "HostName", hostName)
+	}
+
+	hostConfigKeys := sortMapByKeys(hostConfig)
+
+	// Process the host config in the sorted order of its keys.
+	for _, k := range hostConfigKeys {
+		output = appendConfigToOutput(output, k, hostConfig[k])
+	}
+
+	return output
 }
 
 // getGroupConfig returns the config to apply to the entire group.
@@ -272,23 +281,26 @@ func (p *Parser) getGroupConfig(configMap map[string]any) map[string]any {
 // A user can define "Extends" in their config to inherit from another config.
 // @see https://sshush.bencromwell.com/docs/configuration/extends/
 func (p *Parser) getExtendedConfig(configMap map[string]any) map[string]any {
-	if extends, extendsExists := configMap["Extends"]; extendsExists {
-		extendsStr, ok := extends.(string)
-		if !ok {
-			slog.Warn("extends is not a string")
+	extends, extendsExists := configMap["Extends"]
+	if !extendsExists {
+		return make(map[string]any)
+	}
 
-			return make(map[string]any)
+	extendsStr, extendsExists := extends.(string)
+	if !extendsExists {
+		slog.Warn("extends is not a string")
+
+		return make(map[string]any)
+	}
+
+	extendedConfig, hasTargetConfig := p.Extensions[extendsStr]
+	if hasTargetConfig {
+		if p.Debug {
+			_, _ = pp.Printf("Extended config %s\n", extendsStr)
+			_, _ = pp.Println(extendedConfig)
 		}
 
-		extendedConfig, hasTargetConfig := p.Extensions[extendsStr]
-		if hasTargetConfig {
-			if p.Debug {
-				_, _ = pp.Printf("Extended config %s\n", extendsStr)
-				_, _ = pp.Println(extendedConfig)
-			}
-
-			return extendedConfig.Config
-		}
+		return extendedConfig.Config
 	}
 
 	return make(map[string]any)
