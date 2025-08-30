@@ -47,6 +47,8 @@ func NewRootCommand(version, commit string) *cobra.Command {
 			sources := viper.GetStringSlice("source")
 			dest := viper.GetString("dest")
 
+			fmt.Println("sources", sources)
+
 			// Expand glob patterns and handle tilde and environment variables.
 			var fileSources []string
 			for _, pattern := range sources {
@@ -60,6 +62,8 @@ func NewRootCommand(version, commit string) *cobra.Command {
 				}
 				fileSources = append(fileSources, matches...)
 			}
+
+			fmt.Println(fileSources)
 
 			runner := &sshush.Runner{
 				Sources:     fileSources,
@@ -77,7 +81,8 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	homeDir, err := os.UserHomeDir()
 	must(err)
 
-	cmd.PersistentFlags().StringSlice("source", []string{}, "the source file(s) to read from")
+	// cmd.PersistentFlags().StringSlice("source", []string{}, "the source file(s) to read from")
+	cmd.PersistentFlags().StringArrayP("source", "s", []string{}, "the source file(s) to read from (can be specified multiple times)")
 	cmd.PersistentFlags().String("dest", homeDir+"/.ssh/config", "the destination path to write to")
 	cmd.PersistentFlags().BoolP("verbose", "V", false, "verbose output")
 	cmd.PersistentFlags().Bool("debug", false, "debug output")
