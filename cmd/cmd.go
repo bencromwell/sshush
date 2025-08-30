@@ -32,8 +32,10 @@ func expandPath(path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		path = filepath.Join(homeDir, path[1:])
 	}
+
 	return path, nil
 }
 

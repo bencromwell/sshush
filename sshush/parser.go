@@ -73,6 +73,7 @@ func (p *Parser) extractAndSetConfig(
 ) {
 	if config := extractBlock(blockName, m); config != nil {
 		*configProperty = config
+
 		m.Delete(blockName)
 	}
 }
@@ -117,8 +118,10 @@ func (p *Parser) extractExtensions() {
 
 // ProduceConfig produces the SSH configuration.
 func (p *Parser) ProduceConfig() ([]string, error) {
-	var output []string
-	var err error
+	var (
+		output []string
+		err    error
+	)
 
 	for pair := p.UnprocessedConfig.Oldest(); pair != nil; pair = pair.Next() {
 		output, err = p.processConfigGroup(pair, output)
@@ -130,6 +133,7 @@ func (p *Parser) ProduceConfig() ([]string, error) {
 	// Add the global config.
 	if len(p.GlobalConfig) > 0 {
 		output = append(output, "# Global config")
+
 		output = append(output, "Host *")
 		globalConfigKeys := sortMapByKeys(p.GlobalConfig)
 		// Process the global config in the sorted order of its keys.
@@ -156,10 +160,11 @@ func (p *Parser) processConfigGroup(
 		pp.Println("Config: ", config)
 	}
 
-	output = append(output, fmt.Sprintf("# %s", identifier))
+	output = append(output, "# "+identifier)
 
 	if configMap, ok := config.(map[string]any); ok {
 		var err error
+
 		output, err = p.processConfigMap(configMap, output)
 		if err != nil {
 			return nil, err
@@ -210,6 +215,7 @@ func (p *Parser) processConfigMap(
 			// Hoist HostName to the top.
 			hostName := hostConfig["HostName"]
 			delete(hostConfig, "HostName")
+
 			if hostName != nil {
 				output = appendLineToOutput(output, "HostName", hostName)
 			}
@@ -290,7 +296,7 @@ func getHostConfig(hostConfig any, groupConfig map[string]any) map[string]any {
 }
 
 // MergeMaps merges any number of maps and returns the result.
-// If a key is present, it's overriden by the last map that contains it.
+// If a key is present, it's overridden by the last map that contains it.
 func mergeMaps(maps ...map[string]any) map[string]any {
 	merged := make(map[string]any)
 
@@ -394,10 +400,13 @@ func expandListToMapOfHosts(
 // Prefix is optional.
 // @see https://sshush.bencromwell.com/docs/configuration/prefix/
 func getPrefixFromConfigMap(configMap map[string]any) (string, error) {
-	var prefix string
-	var err error
+	var (
+		prefix string
+		err    error
+	)
 
 	// Set the prefix if we have one.
+
 	if tP, ok := configMap["Prefix"]; ok {
 		prefix, ok = tP.(string)
 		if !ok {
