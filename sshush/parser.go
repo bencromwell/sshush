@@ -3,6 +3,7 @@ package sshush
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"strings"
@@ -30,13 +31,19 @@ type (
 	}
 )
 
+var (
+	ErrConfigNotMap          = errors.New("config is not a map")
+	ErrHostsNotListOfStrings = errors.New("hosts is not list of strings")
+	ErrPrefixNotAString      = errors.New("prefix is not a string")
+)
+
 // Load loads the configuration from the sources.
 // It processes the global and default config blocks.
 // It also resolves the Extends declarations.
 // It does not process the config itself.
 func (p *Parser) Load(sources *sshConfigSources) error {
-	// m is initialised outside the source loop such that it's appended to.
-	m := orderedmap.New[string, any]()
+	// the map is initialised outside the source loop such that it's appended to.
+	configMap := orderedmap.New[string, any]()
 
 	for _, source := range *sources {
 		contents, err := os.ReadFile(source)
@@ -44,19 +51,19 @@ func (p *Parser) Load(sources *sshConfigSources) error {
 			return fmt.Errorf("reading file: %w", err)
 		}
 
-		err = yaml.Unmarshal(contents, &m)
+		err = yaml.Unmarshal(contents, &configMap)
 		if err != nil {
 			return fmt.Errorf("unmarshalling yaml: %w", err)
 		}
 
 		// if global config exists in this source, set it and remove it.
-		p.extractAndSetConfig(m, &p.GlobalConfig, "global")
+		p.extractAndSetConfig(configMap, &p.GlobalConfig, "global")
 
 		// if default config exists in this source, set it and remove it.
-		p.extractAndSetConfig(m, &p.DefaultConfig, "default")
+		p.extractAndSetConfig(configMap, &p.DefaultConfig, "default")
 	}
 
-	p.UnprocessedConfig = m
+	p.UnprocessedConfig = configMap
 
 	// process Extends declarations.
 	p.extractExtensions()
@@ -67,13 +74,14 @@ func (p *Parser) Load(sources *sshConfigSources) error {
 // extractAndSetConfig extracts a block from the config map and sets it to the
 // configProperty. It then removes the block from the config map.
 func (p *Parser) extractAndSetConfig(
-	m *orderedmap.OrderedMap[string, any],
+	configMap *orderedmap.OrderedMap[string, any],
 	configProperty *map[string]any,
 	blockName string,
 ) {
-	if config := extractBlock(blockName, m); config != nil {
+	if config := extractBlock(blockName, configMap); config != nil {
 		*configProperty = config
-		m.Delete(blockName)
+
+		configMap.Delete(blockName)
 	}
 }
 
@@ -117,8 +125,10 @@ func (p *Parser) extractExtensions() {
 
 // ProduceConfig produces the SSH configuration.
 func (p *Parser) ProduceConfig() ([]string, error) {
-	var output []string
-	var err error
+	var (
+		output []string
+		err    error
+	)
 
 	for pair := p.UnprocessedConfig.Oldest(); pair != nil; pair = pair.Next() {
 		output, err = p.processConfigGroup(pair, output)
@@ -129,8 +139,7 @@ func (p *Parser) ProduceConfig() ([]string, error) {
 
 	// Add the global config.
 	if len(p.GlobalConfig) > 0 {
-		output = append(output, "# Global config")
-		output = append(output, "Host *")
+		output = append(output, "# Global config", "Host *")
 		globalConfigKeys := sortMapByKeys(p.GlobalConfig)
 		// Process the global config in the sorted order of its keys.
 		for _, k := range globalConfigKeys {
@@ -152,20 +161,21 @@ func (p *Parser) processConfigGroup(
 	config := pair.Value
 
 	if p.Debug {
-		pp.Println("Identifier: ", identifier)
-		pp.Println("Config: ", config)
+		_, _ = pp.Println("Identifier: ", identifier)
+		_, _ = pp.Println("Config: ", config)
 	}
 
-	output = append(output, fmt.Sprintf("# %s", identifier))
+	output = append(output, "# "+identifier)
 
 	if configMap, ok := config.(map[string]any); ok {
 		var err error
+
 		output, err = p.processConfigMap(configMap, output)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("config for %s is not a map", identifier)
+		return nil, fmt.Errorf("%w: %s", ErrConfigNotMap, identifier)
 	}
 
 	return output, nil
@@ -185,48 +195,63 @@ func (p *Parser) processConfigMap(
 	groupConfig := p.getGroupConfig(configMap)
 
 	if p.Debug {
-		pp.Println("Group config: ", groupConfig)
+		_, _ = pp.Println("Group config: ", groupConfig)
 	}
 
-	if hosts, ok := configMap["Hosts"]; ok {
-		// If it's a direct list of hosts, rearrange things.
-		err = expandListToMapOfHosts(configMap, &hosts)
-		if err != nil {
-			return nil, err
+	hosts, ok := configMap["Hosts"]
+	if !ok {
+		return output, nil
+	}
+
+	// If it's a direct list of hosts, rearrange things.
+	err = expandListToMapOfHosts(configMap, &hosts)
+	if err != nil {
+		return nil, err
+	}
+
+	hostsMap, hostsOk := hosts.(map[string]any)
+	if !hostsOk {
+		return nil, fmt.Errorf("%w: %s", ErrHostsNotListOfStrings, hosts)
+	}
+
+	keys := sortMapByKeys(hostsMap)
+
+	// Process hosts in the sorted order of their keys.
+	for _, host := range keys {
+		hostConfig := getHostConfig(hostsMap[host], groupConfig)
+
+		if p.Debug {
+			_, _ = pp.Println("Host config: ", hostConfig)
 		}
 
-		keys := sortMapByKeys(hosts.(map[string]any))
-
-		// Process hosts in the sorted order of their keys.
-		for _, host := range keys {
-			hostConfig := getHostConfig(hosts.(map[string]any)[host], groupConfig)
-
-			if p.Debug {
-				pp.Println("Host config: ", hostConfig)
-			}
-
-			output = append(output, fmt.Sprintf("Host %s%s", prefix, host))
-
-			// Hoist HostName to the top.
-			hostName := hostConfig["HostName"]
-			delete(hostConfig, "HostName")
-			if hostName != nil {
-				output = appendLineToOutput(output, "HostName", hostName)
-			}
-
-			hostConfigKeys := sortMapByKeys(hostConfig)
-
-			// Process the host config in the sorted order of its keys.
-			for _, k := range hostConfigKeys {
-				v := hostConfig[k]
-				output = appendConfigToOutput(output, k, v)
-			}
-
-			output = append(output, "")
-		}
+		output = append(output, fmt.Sprintf("Host %s%s", prefix, host))
+		output = append(output, p.makeHostConfig(hostConfig)...)
+		output = append(output, "")
 	}
 
 	return output, nil
+}
+
+// makeHostConfig produces the config block for the given host configuration.
+func (p *Parser) makeHostConfig(hostConfig map[string]any) []string {
+	var output []string
+
+	// Hoist HostName to the top.
+	hostName := hostConfig["HostName"]
+	delete(hostConfig, "HostName")
+
+	if hostName != nil {
+		output = appendLineToOutput(output, "HostName", hostName)
+	}
+
+	hostConfigKeys := sortMapByKeys(hostConfig)
+
+	// Process the host config in the sorted order of its keys.
+	for _, k := range hostConfigKeys {
+		output = appendConfigToOutput(output, k, hostConfig[k])
+	}
+
+	return output
 }
 
 // getGroupConfig returns the config to apply to the entire group.
@@ -242,7 +267,11 @@ func (p *Parser) getGroupConfig(configMap map[string]any) map[string]any {
 
 	// If we have config for this specific group, add that in.
 	if config, ok := configMap["Config"]; ok {
-		groupConfig = mergeMaps(groupConfig, config.(map[string]any))
+		//nolint:errcheck,forcetypeassert // We don't return an error from this func, so for the
+		// moment until we can add some test cases around bad config, ignore the
+		// linter's warning.
+		m := config.(map[string]any)
+		groupConfig = mergeMaps(groupConfig, m)
 	}
 
 	return groupConfig
@@ -252,16 +281,26 @@ func (p *Parser) getGroupConfig(configMap map[string]any) map[string]any {
 // A user can define "Extends" in their config to inherit from another config.
 // @see https://sshush.bencromwell.com/docs/configuration/extends/
 func (p *Parser) getExtendedConfig(configMap map[string]any) map[string]any {
-	if extends, extendsExists := configMap["Extends"]; extendsExists {
-		extendedConfig, hasTargetConfig := p.Extensions[extends.(string)]
-		if hasTargetConfig {
-			if p.Debug {
-				pp.Printf("Extended config %s\n", extends.(string))
-				pp.Println(extendedConfig)
-			}
+	extends, extendsExists := configMap["Extends"]
+	if !extendsExists {
+		return make(map[string]any)
+	}
 
-			return extendedConfig.Config
+	extendsStr, extendsExists := extends.(string)
+	if !extendsExists {
+		slog.Warn("extends is not a string")
+
+		return make(map[string]any)
+	}
+
+	extendedConfig, hasTargetConfig := p.Extensions[extendsStr]
+	if hasTargetConfig {
+		if p.Debug {
+			_, _ = pp.Printf("Extended config %s\n", extendsStr)
+			_, _ = pp.Println(extendedConfig)
 		}
+
+		return extendedConfig.Config
 	}
 
 	return make(map[string]any)
@@ -283,6 +322,7 @@ func getHostConfig(hostConfig any, groupConfig map[string]any) map[string]any {
 		}
 	} else {
 		// If we had a map, we need to merge the group config with the host config.
+		//nolint:errcheck,forcetypeassert // Pending on adding bad config test cases.
 		configForThisHost = mergeMaps(groupConfig, hostConfig.(map[string]any))
 	}
 
@@ -290,7 +330,7 @@ func getHostConfig(hostConfig any, groupConfig map[string]any) map[string]any {
 }
 
 // MergeMaps merges any number of maps and returns the result.
-// If a key is present, it's overriden by the last map that contains it.
+// If a key is present, it's overridden by the last map that contains it.
 func mergeMaps(maps ...map[string]any) map[string]any {
 	merged := make(map[string]any)
 
@@ -376,7 +416,7 @@ func expandListToMapOfHosts(
 		for _, host := range listOfHosts {
 			host, hostIsString := host.(string)
 			if !hostIsString {
-				return errors.New("\"Hosts\" must be a list of strings")
+				return ErrHostsNotListOfStrings
 			}
 
 			tmpHosts[host] = host
@@ -394,14 +434,17 @@ func expandListToMapOfHosts(
 // Prefix is optional.
 // @see https://sshush.bencromwell.com/docs/configuration/prefix/
 func getPrefixFromConfigMap(configMap map[string]any) (string, error) {
-	var prefix string
-	var err error
+	var (
+		prefix string
+		err    error
+	)
 
 	// Set the prefix if we have one.
+
 	if tP, ok := configMap["Prefix"]; ok {
 		prefix, ok = tP.(string)
 		if !ok {
-			err = errors.New("\"Prefix\" must be a string")
+			err = ErrPrefixNotAString
 		}
 	}
 
@@ -415,13 +458,13 @@ func appendConfigToOutput(
 	key string,
 	value any,
 ) []string {
-	switch v := value.(type) {
+	switch typedValue := value.(type) {
 	case []any:
-		for _, nestedValue := range v {
+		for _, nestedValue := range typedValue {
 			output = appendConfigToOutput(output, key, nestedValue)
 		}
 	default:
-		output = appendLineToOutput(output, key, v)
+		output = appendLineToOutput(output, key, typedValue)
 	}
 
 	return output
