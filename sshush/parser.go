@@ -322,6 +322,7 @@ func getHostConfig(hostConfig any, groupConfig map[string]any) map[string]any {
 		}
 	} else {
 		// If we had a map, we need to merge the group config with the host config.
+		//nolint:errcheck,forcetypeassert // Pending on adding bad config test cases.
 		configForThisHost = mergeMaps(groupConfig, hostConfig.(map[string]any))
 	}
 
