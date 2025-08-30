@@ -49,19 +49,7 @@ func NewRootCommand(version, commit string) *cobra.Command {
 			sources := viper.GetStringSlice("source")
 			dest := viper.GetString("dest")
 
-			// Expand glob patterns and handle tilde and environment variables.
-			var fileSources []string
-			for _, pattern := range sources {
-				expandedPattern, err := expandPath(pattern)
-				if err != nil {
-					must(fmt.Errorf("expanding path: %w", err))
-				}
-				matches, err := filepath.Glob(expandedPattern)
-				if err != nil {
-					must(fmt.Errorf("expanding glob pattern: %w", err))
-				}
-				fileSources = append(fileSources, matches...)
-			}
+			fileSources := expandGlobs(sources)
 
 			runner := &sshush.Runner{
 				Sources:     fileSources,
@@ -107,4 +95,25 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	}
 
 	return cmd
+}
+
+// expandGlobs expands glob patterns and handles tilde and environment variables.
+func expandGlobs(sources []string) []string {
+	var fileSources []string
+
+	for _, pattern := range sources {
+		expandedPattern, err := expandPath(pattern)
+		if err != nil {
+			must(fmt.Errorf("expanding path: %w", err))
+		}
+
+		matches, err := filepath.Glob(expandedPattern)
+		if err != nil {
+			must(fmt.Errorf("expanding glob pattern: %w", err))
+		}
+
+		fileSources = append(fileSources, matches...)
+	}
+
+	return fileSources
 }
