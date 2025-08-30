@@ -54,6 +54,7 @@ func NewRootCommand(version, commit string) *cobra.Command {
 			runner := &sshush.Runner{
 				Sources:     fileSources,
 				Destination: dest,
+				Out:         os.Stdout,
 			}
 
 			verbose, err := cmd.Flags().GetBool("verbose")
