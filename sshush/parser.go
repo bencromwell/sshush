@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/adrg/frontmatter"
 	"github.com/k0kubun/pp/v3"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
@@ -29,6 +30,15 @@ type (
 		Config     map[string]any
 		Extends    string
 	}
+
+	SourceFrontMatter struct {
+		Priority int `yaml:"priority,omitempty"`
+	}
+
+	PrioritisedSource struct {
+		Priority int
+		Source   string
+	}
 )
 
 var (
@@ -37,11 +47,62 @@ var (
 	ErrPrefixNotAString      = errors.New("prefix is not a string")
 )
 
+// OrderSources checks each file for optional yaml frontmatter. If frontmatter
+// contains a priority int value, we use that to sort (ascending) each
+// prioritised source. Files with no frontmatter are considered unprioritised
+// and retain their natural ordering.
+func (p *Parser) OrderSources(sources *SshConfigSources) (*SshConfigSources, error) {
+	var prioritised []PrioritisedSource
+	var unPrioritised []string
+
+	for _, source := range *sources {
+		s, err := os.Open(source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open source file %s: %w", source, err)
+		}
+
+		fm := &SourceFrontMatter{}
+		_, err = frontmatter.Parse(s, fm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse source file %s: %w", source, err)
+		}
+
+		if fm.Priority == 0 {
+			unPrioritised = append(unPrioritised, source)
+		} else {
+			prioritised = append(prioritised, PrioritisedSource{
+				Priority: fm.Priority,
+				Source:   source,
+			})
+
+			if p.Debug {
+				_, _ = pp.Printf("Prioritised file: %s Priority: %d\n", source, fm.Priority)
+			}
+		}
+	}
+
+	sort.SliceStable(prioritised, func(i, j int) bool {
+		return prioritised[i].Priority < prioritised[j].Priority
+	})
+
+	out := SshConfigSources{}
+
+	for _, source := range prioritised {
+		out = append(out, source.Source)
+	}
+
+	for _, source := range unPrioritised {
+		out = append(out, source)
+	}
+
+	return &out, nil
+}
+
 // Load loads the configuration from the sources.
 // It processes the global and default config blocks.
 // It also resolves the Extends declarations.
 // It does not process the config itself.
-func (p *Parser) Load(sources *sshConfigSources) error {
+func (p *Parser) Load(sources *SshConfigSources) error {
 	// the map is initialised outside the source loop such that it's appended to.
 	configMap := orderedmap.New[string, any]()
 
@@ -51,7 +112,10 @@ func (p *Parser) Load(sources *sshConfigSources) error {
 			return fmt.Errorf("reading file: %w", err)
 		}
 
-		err = yaml.Unmarshal(contents, &configMap)
+		fm := &SourceFrontMatter{}
+
+		data, err := frontmatter.Parse(strings.NewReader(string(contents)), fm)
+		err = yaml.Unmarshal(data, &configMap)
 		if err != nil {
 			return fmt.Errorf("unmarshalling yaml: %w", err)
 		}
