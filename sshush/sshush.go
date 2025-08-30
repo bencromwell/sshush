@@ -52,9 +52,9 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 	}
 
 	if debug {
-		pp.Println("Global config: ", p.GlobalConfig)
-		pp.Println("Default config: ", p.DefaultConfig)
-		pp.Println("Extensions: ", p.Extensions)
+		_, _ = pp.Println("Global config: ", p.GlobalConfig)
+		_, _ = pp.Println("Default config: ", p.DefaultConfig)
+		_, _ = pp.Println("Extensions: ", p.Extensions)
 	}
 
 	output = removeTrailingEmptyLine(output)
@@ -113,13 +113,16 @@ func PrettyDiff(old, new, file string) (string, error) {
 // It returns the number of bytes written and an error, if any.
 func writeLines(fh *os.File, lines []string) (int, error) {
 	n := 0
+
 	for _, line := range lines {
 		nL, err := writeLine(fh, line)
 		if err != nil {
 			return n, err
 		}
+
 		n += nL
 	}
+
 	return n, nil
 }
 
