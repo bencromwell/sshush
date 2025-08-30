@@ -150,3 +150,54 @@ func TestCreatesBackupFile(t *testing.T) {
 	backupFileContents, err := os.ReadFile(backupFile)
 	assert.Equal(t, []byte("hello\n"), backupFileContents)
 }
+
+func TestPriorityOrder(t *testing.T) {
+	var buf bytes.Buffer
+
+	sources := []string{
+		filepath.Join("testdata", "aws.yml"),
+		filepath.Join("testdata", "example.yml"),
+		filepath.Join("testdata", "ciscos2.yml"),
+	}
+
+	destination := filepath.Join("testdata", "prioritised.out")
+
+	sshushRunner := &sshush.Runner{
+		Sources:     sources,
+		Destination: destination,
+		Out:         &buf,
+	}
+
+	err := sshushRunner.Run(true, true, false, "0.0.0-dev")
+	require.NoError(t, err)
+
+	generatedContents := string(golden.Get(t, "prioritised.out"))
+	golden.Assert(t, generatedContents, "prioritised.golden")
+}
+
+// TestPriorityOrderWithMixedSources tests with some files that have frontmatter
+// and some that do not.
+func TestPriorityOrderWithMixedSources(t *testing.T) {
+	var buf bytes.Buffer
+
+	sources := []string{
+		filepath.Join("testdata", "aws.yml"),
+		filepath.Join("testdata", "example.yml"),
+		filepath.Join("testdata", "example2.yml"),
+		filepath.Join("testdata", "ciscos2.yml"),
+	}
+
+	destination := filepath.Join("testdata", "prioritised_mixed.out")
+
+	sshushRunner := &sshush.Runner{
+		Sources:     sources,
+		Destination: destination,
+		Out:         &buf,
+	}
+
+	err := sshushRunner.Run(true, true, false, "0.0.0-dev")
+	require.NoError(t, err)
+
+	generatedContents := string(golden.Get(t, "prioritised_mixed.out"))
+	golden.Assert(t, generatedContents, "prioritised_mixed.golden")
+}
