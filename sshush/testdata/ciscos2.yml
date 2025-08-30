@@ -1,4 +1,6 @@
 ---
+priority: 300
+---
 ciscos:
   Config:
     Ciphers: aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
