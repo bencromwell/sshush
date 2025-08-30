@@ -29,13 +29,13 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 		)
 	}
 
-	p := Parser{
+	parser := Parser{
 		Verbose: verbose,
 		Debug:   debug,
 		DryRun:  dryRun,
 	}
 
-	err := p.Load(&s.Sources)
+	err := parser.Load(&s.Sources)
 	if err != nil {
 		return fmt.Errorf("loading sources: %w", err)
 	}
@@ -46,28 +46,30 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 		"",
 	}
 
-	output, err := p.ProduceConfig()
+	output, err := parser.ProduceConfig()
 	if err != nil {
 		return fmt.Errorf("producing config: %w", err)
 	}
 
 	if debug {
-		_, _ = pp.Println("Global config: ", p.GlobalConfig)
-		_, _ = pp.Println("Default config: ", p.DefaultConfig)
-		_, _ = pp.Println("Extensions: ", p.Extensions)
+		_, _ = pp.Println("Global config: ", parser.GlobalConfig)
+		_, _ = pp.Println("Default config: ", parser.DefaultConfig)
+		_, _ = pp.Println("Extensions: ", parser.Extensions)
 	}
 
 	output = removeTrailingEmptyLine(output)
 	newConfig := slices.Concat(headers, output)
 
 	if dryRun {
-		c, err := os.ReadFile(s.Destination)
+		contents, err := os.ReadFile(s.Destination)
 		if err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("reading destination file: %w", err)
 		}
+
 		oldConfig := ""
+
 		if !os.IsNotExist(err) {
-			lines := strings.Split(string(c), "\n")
+			lines := strings.Split(string(contents), "\n")
 			oldConfig = strings.Join(removeTrailingEmptyLine(lines), "\n")
 		}
 
@@ -75,55 +77,63 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 		if err != nil {
 			return fmt.Errorf("creating diff: %w", err)
 		}
+
 		fmt.Println(diff)
 	} else {
-		fh, err := os.Create(s.Destination)
+		configFh, err := os.Create(s.Destination)
 		if err != nil {
 			return fmt.Errorf("opening destination file: %w", err)
 		}
-		defer fh.Close()
+		defer configFh.Close()
 
-		n, err := writeLines(fh, newConfig)
+		bytesWritten, err := writeLines(configFh, newConfig)
 		if err != nil {
 			return fmt.Errorf("writing output: %w", err)
 		}
 
 		if verbose {
-			slog.Info(fmt.Sprintf("Wrote %d bytes to %s", n, s.Destination))
+			slog.Info(fmt.Sprintf("Wrote %d bytes to %s", bytesWritten, s.Destination))
 		}
 	}
 
 	return nil
 }
 
-// PrettyDiff compares two strings and returns a colored diff.
-func PrettyDiff(old, new, file string) (string, error) {
+// PrettyDiff compares two strings and returns a coloured diff.
+func PrettyDiff(oldConfig, newConfig, file string) (string, error) {
 	diff := difflib.LineDiffParams{
-		A:        difflib.SplitLines(old),
-		B:        difflib.SplitLines(new),
-		FromFile: fmt.Sprintf("%s (Old)", file),
-		ToFile:   fmt.Sprintf("%s (New)", file),
-		Context:  3,
-		Colored:  true,
+		A:        difflib.SplitLines(oldConfig),
+		B:        difflib.SplitLines(newConfig),
+		FromFile: file + " (Old)",
+		ToFile:   file + " (New)",
+		//nolint:mnd // Number of context lines for the diff.
+		Context: 3,
+		Colored: true,
 	}
-	return difflib.GetUnifiedDiffString(diff)
+
+	diffResult, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		return "", fmt.Errorf("getting diff result: %w", err)
+	}
+
+	return diffResult, nil
 }
 
 // writeLines writes a map of lines to the file handle.
 // It returns the number of bytes written and an error, if any.
 func writeLines(fh *os.File, lines []string) (int, error) {
-	n := 0
+	bytesWritten := 0
 
 	for _, line := range lines {
 		nL, err := writeLine(fh, line)
 		if err != nil {
-			return n, err
+			return bytesWritten, err
 		}
 
-		n += nL
+		bytesWritten += nL
 	}
 
-	return n, nil
+	return bytesWritten, nil
 }
 
 // writeLine writes a line to the file handle.
