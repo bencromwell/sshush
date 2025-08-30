@@ -15,10 +15,10 @@ import (
 )
 
 type (
-	sshConfigSources []string
+	SshConfigSources []string
 
 	Runner struct {
-		Sources     sshConfigSources
+		Sources     SshConfigSources
 		Destination string
 		Out         io.Writer
 	}
@@ -46,7 +46,12 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 		DryRun:  dryRun,
 	}
 
-	err := parser.Load(&s.Sources)
+	sources, err := parser.OrderSources(&s.Sources)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrLoadingSources, err)
+	}
+
+	err = parser.Load(sources)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrLoadingSources, err)
 	}
