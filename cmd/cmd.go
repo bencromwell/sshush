@@ -30,10 +30,12 @@ func expandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("getting home dir: %w", err)
 		}
+
 		path = filepath.Join(homeDir, path[1:])
 	}
+
 	return path, nil
 }
 
@@ -47,30 +49,22 @@ func NewRootCommand(version, commit string) *cobra.Command {
 			sources := viper.GetStringSlice("source")
 			dest := viper.GetString("dest")
 
-			// Expand glob patterns and handle tilde and environment variables.
-			var fileSources []string
-			for _, pattern := range sources {
-				expandedPattern, err := expandPath(pattern)
-				if err != nil {
-					must(fmt.Errorf("expanding path: %w", err))
-				}
-				matches, err := filepath.Glob(expandedPattern)
-				if err != nil {
-					must(fmt.Errorf("expanding glob pattern: %w", err))
-				}
-				fileSources = append(fileSources, matches...)
-			}
+			fileSources := expandGlobs(sources)
 
 			runner := &sshush.Runner{
 				Sources:     fileSources,
 				Destination: dest,
+				Out:         os.Stdout,
 			}
 
-			verbose, _ := cmd.Flags().GetBool("verbose")
-			debug, _ := cmd.Flags().GetBool("debug")
-			dryRun, _ := cmd.Flags().GetBool("dry-run")
+			verbose, err := cmd.Flags().GetBool("verbose")
+			must(err)
+			debug, err := cmd.Flags().GetBool("debug")
+			must(err)
+			dryRun, err := cmd.Flags().GetBool("dry-run")
+			must(err)
 
-			err := runner.Run(verbose, debug, dryRun, version)
+			err = runner.Run(verbose, debug, dryRun, version)
 			must(err)
 		},
 	}
@@ -102,4 +96,25 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	}
 
 	return cmd
+}
+
+// expandGlobs expands glob patterns and handles tilde and environment variables.
+func expandGlobs(sources []string) []string {
+	var fileSources []string
+
+	for _, pattern := range sources {
+		expandedPattern, err := expandPath(pattern)
+		if err != nil {
+			must(fmt.Errorf("expanding path: %w", err))
+		}
+
+		matches, err := filepath.Glob(expandedPattern)
+		if err != nil {
+			must(fmt.Errorf("expanding glob pattern: %w", err))
+		}
+
+		fileSources = append(fileSources, matches...)
+	}
+
+	return fileSources
 }

@@ -1,6 +1,7 @@
 package sshush_test
 
 import (
+	"bytes"
 	"path/filepath"
 	"testing"
 
@@ -46,20 +47,75 @@ func TestFunctional(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
+			var buf bytes.Buffer
+
 			sshushRunner := &sshush.Runner{
-				Sources:     tc.sources,
-				Destination: filepath.Join("testdata", tc.destination),
+				Sources:     testCase.sources,
+				Destination: filepath.Join("testdata", testCase.destination),
+				Out:         &buf,
 			}
 
 			err := sshushRunner.Run(true, true, false, "0.0.0-dev")
 			require.NoError(t, err)
 
-			generatedContents := string(golden.Get(t, tc.destination))
-			golden.Assert(t, generatedContents, tc.goldenFile)
+			generatedContents := string(golden.Get(t, testCase.destination))
+			golden.Assert(t, generatedContents, testCase.goldenFile)
 		})
 	}
+}
+
+func TestNoSourceFile(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+
+	sshushRunner := &sshush.Runner{
+		Sources:     []string{filepath.Join("testdata", "does_not_exist.yml")},
+		Destination: filepath.Join("testdata", "does_not_exist.out"),
+		Out:         &buf,
+	}
+
+	err := sshushRunner.Run(true, true, false, "0.0.0-dev")
+	require.ErrorIs(t, err, sshush.ErrLoadingSources)
+}
+
+func TestBadConfig(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+
+	source := filepath.Join("testdata", "bad-config.yml")
+
+	sshushRunner := &sshush.Runner{
+		Sources:     []string{source},
+		Destination: filepath.Join("testdata", "irrelevant"),
+		Out:         &buf,
+	}
+
+	err := sshushRunner.Run(true, true, false, "0.0.0-dev")
+	require.ErrorIs(t, err, sshush.ErrProducingConfig)
+}
+
+func TestDryRun(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+
+	source := filepath.Join("testdata", "aws.yml")
+
+	sshushRunner := &sshush.Runner{
+		Sources:     []string{source},
+		Destination: filepath.Join("testdata", "dryrun_nofile.golden"),
+		Out:         &buf,
+	}
+
+	err := sshushRunner.Run(false, false, true, "0.0.0-dev")
+	require.NoError(t, err)
+
+	generatedContents := buf.String()
+	golden.Assert(t, generatedContents, "dryrun.golden")
 }
