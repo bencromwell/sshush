@@ -20,6 +20,7 @@ type (
 		UnprocessedConfig *orderedmap.OrderedMap[string, any]
 		Verbose           bool
 		Debug             bool
+		DryRun            bool
 	}
 
 	ExtendsConfig struct {
@@ -127,11 +128,14 @@ func (p *Parser) ProduceConfig() ([]string, error) {
 	}
 
 	// Add the global config.
-	if p.GlobalConfig != nil && len(p.GlobalConfig) > 0 {
+	if len(p.GlobalConfig) > 0 {
 		output = append(output, "# Global config")
 		output = append(output, "Host *")
-		for key, value := range p.GlobalConfig {
-			output = append(output, fmt.Sprintf("    %s %s", key, value))
+		globalConfigKeys := sortMapByKeys(p.GlobalConfig)
+		// Process the global config in the sorted order of its keys.
+		for _, k := range globalConfigKeys {
+			v := p.GlobalConfig[k]
+			output = appendConfigToOutput(output, k, v)
 		}
 	}
 

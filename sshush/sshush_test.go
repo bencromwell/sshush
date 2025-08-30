@@ -55,7 +55,7 @@ func TestFunctional(t *testing.T) {
 				Destination: filepath.Join("testdata", tc.destination),
 			}
 
-			err := sshushRunner.Run(true, true, "0.0.0-dev")
+			err := sshushRunner.Run(true, true, false, "0.0.0-dev")
 			require.NoError(t, err)
 
 			generatedContents := string(golden.Get(t, tc.destination))
