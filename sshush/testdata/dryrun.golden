@@ -1,4 +1,3 @@
-[31m[1m"[0m[31mIdentifier: [0m[31m[1m"[0m [31m[1m"[0m[31mweb_servers[0m[31m[1m"[0m
 --- testdata/dryrun_nofile.golden (Old)
 +++ testdata/dryrun_nofile.golden (New)
 @@ -1 +1,13 @@
