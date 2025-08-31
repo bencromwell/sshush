@@ -39,7 +39,6 @@ archives:
         formats: [zip]
 
 changelog:
-  disable: "{{ .Env.CREATE_CHANGELOG }}"
   use: github
   format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
   sort: asc
