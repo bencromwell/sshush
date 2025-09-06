@@ -1,0 +1,39 @@
+name: Docs
+on: [pull_request]
+
+jobs:
+  vale:
+    name: Vale Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            .vale.ini
+            resources/vale-styles
+            README.md
+            docs/
+      - uses: errata-ai/vale-action@v2
+        with:
+          # https://github.com/errata-ai/vale-action/issues/123
+          files: "README.md,docs/"
+          separator: ","
+          reporter: github-pr-annotations
+          fail_on_error: true
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  markdown:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            README.md
+            docs/
+      - uses: DavidAnson/markdownlint-cli2-action@v20
+        with:
+          globs: "README.md,docs/**/*.md"
+          separator: ","
