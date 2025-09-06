@@ -45,6 +45,8 @@ var (
 	ErrConfigNotMap          = errors.New("config is not a map")
 	ErrHostsNotListOfStrings = errors.New("hosts is not list of strings")
 	ErrPrefixNotAString      = errors.New("prefix is not a string")
+	ErrOpeningSourceFile     = errors.New("failed to open source file")
+	ErrParsingSourceFile     = errors.New("failed to parse source file")
 )
 
 // OrderSources checks each file for optional yaml frontmatter. If frontmatter
@@ -58,14 +60,14 @@ func (p *Parser) OrderSources(sources *SSHConfigSources) (*SSHConfigSources, err
 	for _, sourceFileName := range *sources {
 		sourceFile, err := os.Open(sourceFileName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open source file %s: %w", sourceFileName, err)
+			return nil, fmt.Errorf("%w: %s: %w", ErrOpeningSourceFile, sourceFileName, err)
 		}
 
 		frontMatter := &SourceFrontMatter{}
 
 		_, err = frontmatter.Parse(sourceFile, frontMatter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse source file %s: %w", sourceFileName, err)
+			return nil, fmt.Errorf("%w: %s: %w", ErrParsingSourceFile, sourceFileName, err)
 		}
 
 		if frontMatter.Priority == 0 {
