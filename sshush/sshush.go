@@ -95,8 +95,8 @@ func (s *Runner) Run(verbose bool, debug bool, dryRun bool, version string) erro
 }
 
 func (s *Runner) writeRun(verbose bool, newConfig []string) error {
-	// Open but don't truncate - create if not exists, but open for read/write
-	configFh, err := os.OpenFile(s.Destination, os.O_RDWR|os.O_CREATE, 0o666)
+	// Open but don't truncate - create if not exists, but open for read/write.
+	configFh, err := os.OpenFile(s.Destination, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return fmt.Errorf("opening destination file: %w", err)
 	}
