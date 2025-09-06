@@ -45,38 +45,41 @@ var (
 	ErrConfigNotMap          = errors.New("config is not a map")
 	ErrHostsNotListOfStrings = errors.New("hosts is not list of strings")
 	ErrPrefixNotAString      = errors.New("prefix is not a string")
+	ErrOpeningSourceFile     = errors.New("failed to open source file")
+	ErrParsingSourceFile     = errors.New("failed to parse source file")
 )
 
 // OrderSources checks each file for optional yaml frontmatter. If frontmatter
 // contains a priority int value, we use that to sort (ascending) each
 // prioritised source. Files with no frontmatter are considered unprioritised
 // and retain their natural ordering.
-func (p *Parser) OrderSources(sources *SshConfigSources) (*SshConfigSources, error) {
+func (p *Parser) OrderSources(sources *SSHConfigSources) (*SSHConfigSources, error) {
 	var prioritised []PrioritisedSource
 	var unPrioritised []string
 
-	for _, source := range *sources {
-		s, err := os.Open(source)
+	for _, sourceFileName := range *sources {
+		sourceFile, err := os.Open(sourceFileName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open source file %s: %w", source, err)
+			return nil, fmt.Errorf("%w: %s: %w", ErrOpeningSourceFile, sourceFileName, err)
 		}
 
-		fm := &SourceFrontMatter{}
-		_, err = frontmatter.Parse(s, fm)
+		frontMatter := &SourceFrontMatter{}
+
+		_, err = frontmatter.Parse(sourceFile, frontMatter)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse source file %s: %w", source, err)
+			return nil, fmt.Errorf("%w: %s: %w", ErrParsingSourceFile, sourceFileName, err)
 		}
 
-		if fm.Priority == 0 {
-			unPrioritised = append(unPrioritised, source)
+		if frontMatter.Priority == 0 {
+			unPrioritised = append(unPrioritised, sourceFileName)
 		} else {
 			prioritised = append(prioritised, PrioritisedSource{
-				Priority: fm.Priority,
-				Source:   source,
+				Priority: frontMatter.Priority,
+				Source:   sourceFileName,
 			})
 
 			if p.Debug {
-				_, _ = pp.Printf("Prioritised file: %s Priority: %d\n", source, fm.Priority)
+				_, _ = pp.Printf("Prioritised file: %s Priority: %d\n", sourceFileName, frontMatter.Priority)
 			}
 		}
 	}
@@ -85,7 +88,7 @@ func (p *Parser) OrderSources(sources *SshConfigSources) (*SshConfigSources, err
 		return prioritised[i].Priority < prioritised[j].Priority
 	})
 
-	out := SshConfigSources{}
+	out := SSHConfigSources{}
 
 	for _, source := range prioritised {
 		out = append(out, source.Source)
@@ -102,7 +105,7 @@ func (p *Parser) OrderSources(sources *SshConfigSources) (*SshConfigSources, err
 // It processes the global and default config blocks.
 // It also resolves the Extends declarations.
 // It does not process the config itself.
-func (p *Parser) Load(sources *SshConfigSources) error {
+func (p *Parser) Load(sources *SSHConfigSources) error {
 	// the map is initialised outside the source loop such that it's appended to.
 	configMap := orderedmap.New[string, any]()
 
@@ -115,6 +118,10 @@ func (p *Parser) Load(sources *SshConfigSources) error {
 		fm := &SourceFrontMatter{}
 
 		data, err := frontmatter.Parse(strings.NewReader(string(contents)), fm)
+		if err != nil {
+			return fmt.Errorf("parsing frontmatter: %w", err)
+		}
+
 		err = yaml.Unmarshal(data, &configMap)
 		if err != nil {
 			return fmt.Errorf("unmarshalling yaml: %w", err)

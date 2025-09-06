@@ -2,6 +2,9 @@ GOMODNAME := $(shell grep 'module' go.mod | sed -e 's/^module //')
 SOURCES := $(shell find . -name "*.go" -or -name "go.mod" -or -name "go.sum" \
 	-or -name "Makefile")
 
+# The name of your project (usually the name of its binary)
+NAME = sshush
+
 # Verbose output
 ifdef VERBOSE
 V = -v
@@ -55,7 +58,6 @@ tools: $(TOOLS)
 # Build
 #
 
-NAME = sshush
 BINARY = dist/${NAME}
 LDFLAGS := -w -s
 
@@ -68,7 +70,7 @@ ifeq ($(VERSION),)
 endif
 
 $(BINARY): $(SOURCES)
-	CGO_ENABLED=0 go build $(V) -o "$@" -ldflags "$(LDFLAGS) \
+	go build $(V) -o "$@" -ldflags "$(LDFLAGS) \
 		-X main.version=$(VERSION) \
 		-X main.commit=$(GIT_SHA)"
 
@@ -93,7 +95,7 @@ clean:
 
 .PHONY: test
 test:
-	CGO_ENABLED=0 go test $(V) -count=1 $(TESTARGS) ./...
+	CGO_ENABLED=1 go test $(V) -count=1 -race $(TESTARGS) ./...
 
 .PHONY: test-deps
 test-deps:
@@ -104,8 +106,8 @@ lint: $(TOOLDIR)/golangci-lint
 	golangci-lint $(V) run
 
 .PHONY: format
-format: $(TOOLDIR)/goimports $(TOOLDIR)/gofumpt
-	goimports -w . && gofumpt -w .
+format: $(TOOLDIR)/golangci-lint
+	golangci-lint fmt ./...
 
 .SILENT: bench
 .PHONY: bench

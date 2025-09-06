@@ -1,0 +1,53 @@
+---
+  name: CI
+  on: [push]
+  
+  permissions:
+    contents: read
+
+  jobs:
+    golangci:
+      name: lint
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v5
+        - uses: actions/setup-go@v5
+          with:
+            go-version-file: 'go.mod'
+        - name: golangci-lint
+          uses: golangci/golangci-lint-action@v8
+          with:
+            version: v2.4
+  
+    tidy:
+      name: Tidy
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v5
+        - uses: actions/setup-go@v5
+          with:
+            go-version-file: 'go.mod'
+        - name: Check if mods are tidy
+          run: make check-tidy
+  
+    test:
+      name: Test
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v5
+        - uses: actions/setup-go@v5
+          with:
+            go-version-file: 'go.mod'
+        - name: Run tests
+          run: make test
+          env:
+            TESTARGS: "-covermode=atomic -coverprofile=./coverage.out"
+        - run: go tool cover -html=coverage.out -o=coverage.html
+        - name: Upload coverage report to artifacts
+          uses: actions/upload-artifact@v4
+          with:
+            name: coverage-report
+            path: |
+              coverage.out
+              coverage.html
+            if-no-files-found: error
