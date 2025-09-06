@@ -1,0 +1,16 @@
+extends: spelling
+message: |
+  Did you really mean '%s'?
+
+  If intentional, try code/bold formatting.
+
+# Further details:
+#   For UI elements, use bold formatting.
+#
+#  For paths; configuration; user input; code; class, method, and variable names; statuscodes; and console output, use code formatting.
+#
+#  The spell checker doesn't check words with bold or code formatting.
+level: error
+dictionaries:
+  - en_GB
+dicpath: config/dictionaries/
