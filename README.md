@@ -160,3 +160,11 @@ Host *
 ## Notes
 
 This was originally written in Python, which can be found in the 1.x branch.
+
+---
+
+## Release Process
+
+This project makes use of [GoReleaser](https://goreleaser.com/) and its GitHub Action.
+
+Create a tag, or create a release and tag in GitHub's UI and it will trigger the GitHub Action to run against the tag, creating the build and its changelog release notes per the GoReleaser configuration.
