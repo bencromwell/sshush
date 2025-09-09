@@ -39,9 +39,7 @@ archives:
         formats: [zip]
 
 changelog:
-  use: github
-  format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
-  sort: asc
+  use: git
   abbrev: -1
   filters:
     # Commit messages matching the regexp listed here will be removed from
@@ -49,9 +47,12 @@ changelog:
     #
     # Matches are performed against the first line of the commit message only.
     exclude:
+      - "^chore:"
       - "^docs:"
+      - "^refactor:"
       - "^test:"
       - typo
+      - "Merge pull request"
 
   # Group commits messages by given regex and title.
   # Order value defines the order of the groups.
@@ -68,7 +69,7 @@ changelog:
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
       order: 0
     - title: "Bug fixes"
-      regexp: '^.*?bug(\([[:word:]]+\))??!?:.+$'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
       order: 1
     - title: Others
       order: 999
