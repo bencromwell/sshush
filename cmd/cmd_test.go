@@ -9,6 +9,12 @@ import (
 	"testing"
 )
 
+const (
+	file1 = "file1.yml"
+	file2 = "file2.yml"
+	file3 = "file3.yml"
+)
+
 func TestCollectSources(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -19,26 +25,26 @@ func TestCollectSources(t *testing.T) {
 		{
 			name:           "positional only",
 			flagSources:    []string{},
-			positionalArgs: []string{"file1.yml", "file2.yml"},
-			wantSources:    []string{"file1.yml", "file2.yml"},
+			positionalArgs: []string{file1, file2},
+			wantSources:    []string{file1, file2},
 		},
 		{
 			name:           "flag only",
-			flagSources:    []string{"file1.yml", "file2.yml"},
+			flagSources:    []string{file1, file2},
 			positionalArgs: []string{},
-			wantSources:    []string{"file1.yml", "file2.yml"},
+			wantSources:    []string{file1, file2},
 		},
 		{
 			name:           "flag and positional",
-			flagSources:    []string{"file1.yml"},
-			positionalArgs: []string{"file2.yml"},
-			wantSources:    []string{"file1.yml", "file2.yml"},
+			flagSources:    []string{file1},
+			positionalArgs: []string{file2},
+			wantSources:    []string{file1, file2},
 		},
 		{
 			name:           "multiple flags and positional",
-			flagSources:    []string{"file1.yml", "file2.yml"},
-			positionalArgs: []string{"file3.yml"},
-			wantSources:    []string{"file1.yml", "file2.yml", "file3.yml"},
+			flagSources:    []string{file1, file2},
+			positionalArgs: []string{file3},
+			wantSources:    []string{file1, file2, file3},
 		},
 		{
 			name:           "no sources",
@@ -117,7 +123,7 @@ func TestExpandPath(t *testing.T) {
 func TestExpandGlobs(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	files := []string{"file1.yml", "file2.yml", "other.txt"}
+	files := []string{file1, file2, "other.txt"}
 	for _, file := range files {
 		path := filepath.Join(tmpDir, file)
 		if err := os.WriteFile(path, []byte("test"), 0o600); err != nil {

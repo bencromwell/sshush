@@ -79,7 +79,11 @@ func (p *Parser) OrderSources(sources *SSHConfigSources) (*SSHConfigSources, err
 			})
 
 			if p.Debug {
-				_, _ = pp.Printf("Prioritised file: %s Priority: %d\n", sourceFileName, frontMatter.Priority)
+				_, _ = pp.Printf(
+					"Prioritised file: %s Priority: %d\n",
+					sourceFileName,
+					frontMatter.Priority,
+				)
 			}
 		}
 	}
@@ -160,6 +164,7 @@ func (p *Parser) extractAndSetConfig(
 // @see https://sshush.bencromwell.com/docs/configuration/extends/
 func (p *Parser) extractExtensions() {
 	extensions := make(map[string]ExtendsConfig)
+
 	for pair := p.UnprocessedConfig.Oldest(); pair != nil; pair = pair.Next() {
 		configMap, ok := pair.Value.(map[string]any)
 		if !ok {
