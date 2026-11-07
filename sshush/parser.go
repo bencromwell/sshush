@@ -131,6 +131,12 @@ func (p *Parser) Load(sources *SSHConfigSources) error {
 			return fmt.Errorf("unmarshalling yaml: %w", err)
 		}
 
+		// yaml.Unmarshal can set configMap to nil for empty documents.
+		// In that case, we need to reinitialize it to maintain consistency.
+		if configMap == nil {
+			configMap = orderedmap.New[string, any]()
+		}
+
 		// if global config exists in this source, set it and remove it.
 		p.extractAndSetConfig(configMap, &p.GlobalConfig, "global")
 

@@ -273,15 +273,9 @@ func TestParserEdgeCases(t *testing.T) {
 			Out:         &buf,
 		}
 
-		// Empty config currently causes a panic due to nil pointer dereference
-		// This is a known issue to be fixed
-		// For now, we verify it doesn't succeed silently
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("expected panic with empty config file (known issue)")
-			}
-		}()
-		_ = sshushRunner.Run(true, true, false, "0.0.0-dev")
+		// Empty config should now produce valid (empty) output
+		err := sshushRunner.Run(true, true, false, "0.0.0-dev")
+		require.NoError(t, err)
 	})
 
 	t.Run("frontmatter only file", func(t *testing.T) {
