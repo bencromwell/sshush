@@ -30,7 +30,7 @@ jobs:
 
       - name: Release
         id: semantic
-        run: npx semantic-release@24
+        run: npx semantic-release@25
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
