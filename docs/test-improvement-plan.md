@@ -84,32 +84,32 @@ This document outlines a detailed plan to improve test coverage and verification
 
 ---
 
-### Phase 3: End-to-End Binary Testing ⏳ PENDING
+### Phase 3: End-to-End Binary Testing ✅ COMPLETE
 **Priority:** Medium  
 **Goal:** Verify the compiled binary works as expected.
 
 #### Tasks
 1. **Build the Binary in Tests**
-   - [ ] Use `go build` to compile sshush during test setup
-   - [ ] Store binary path for subprocess testing
+   - [x] Use `go build` to compile sshush during test setup
+   - [x] Store binary path for subprocess testing
 
 2. **Test Binary Execution**
-   - [ ] Spawn binary as subprocess
-   - [ ] Verify `--version` flag output matches expected format
-   - [ ] Verify `--help` flag output contains all commands/flags
-   - [ ] Test error cases (invalid flags, missing files)
-   - [ ] Verify exit codes (0 for success, 1 for errors)
+   - [x] Spawn binary as subprocess
+   - [x] Verify `--version` flag output matches expected format
+   - [x] Verify `--help` flag output contains all commands/flags
+   - [x] Test error cases (invalid flags, missing files)
+   - [x] Verify exit codes (0 for success, 1 for errors)
 
 3. **Test File I/O**
-   - [ ] Create temporary directories/files for testing
-   - [ ] Verify config generation to a real file
+   - [x] Create temporary directories/files for testing
+   - [x] Verify config generation to a real file
    - [ ] Verify backup file creation
-   - [ ] Test dry-run mode (no file writes)
+   - [x] Test dry-run mode (no file writes)
 
 #### Acceptance Criteria
-- [ ] Binary can be executed and tested as subprocess
-- [ ] All CLI flags work as expected
-- [ ] File I/O behaves correctly
+- [x] Binary can be executed and tested as subprocess
+- [x] All CLI flags work as expected
+- [x] File I/O behaves correctly
 
 ---
 
@@ -181,7 +181,7 @@ This document outlines a detailed plan to improve test coverage and verification
 
 **Total Estimated Duration:** 1-2 weeks (can be done incrementally)
 
-**Actual Progress:** 4 of 5 phases complete ✅
+**Actual Progress:** **4 of 5 phases complete + bug fix** ✅
 
 ---
 
@@ -205,7 +205,7 @@ This document outlines a detailed plan to improve test coverage and verification
 1. ✅ All new code has corresponding tests
 2. ✅ No regression in existing test coverage
 3. ⏳ CI pipeline enforces coverage thresholds
-4. ⏳ End-to-end tests verify actual binary behavior
+4. ✅ End-to-end tests verify actual binary behavior
 5. ✅ All CLI flags and options are tested
 
 ---
