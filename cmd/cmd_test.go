@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -82,7 +83,9 @@ func TestCollectSources(t *testing.T) {
 
 func TestExpandPath(t *testing.T) {
 	tmpHome := t.TempDir()
+	// os.UserHomeDir uses HOME on Unix and USERPROFILE on Windows.
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 
 	testCases := []struct {
 		name     string
@@ -140,16 +143,23 @@ func TestExpandGlobs(t *testing.T) {
 	t.Run("match YAML files", func(t *testing.T) {
 		sources := expandGlobs([]string{filepath.Join(tmpDir, "*.yml")})
 
-		if len(sources) != 2 {
-			t.Fatalf("expected 2 YAML files, got %d: %v", len(sources), sources)
+		// filepath.Glob returns matches in sorted order.
+		want := []string{filepath.Join(tmpDir, file1), filepath.Join(tmpDir, file2)}
+		if !slices.Equal(sources, want) {
+			t.Errorf("expected %v, got %v", want, sources)
 		}
 	})
 
 	t.Run("match all files", func(t *testing.T) {
 		sources := expandGlobs([]string{filepath.Join(tmpDir, "*")})
 
-		if len(sources) != 3 {
-			t.Fatalf("expected 3 files, got %d: %v", len(sources), sources)
+		want := []string{
+			filepath.Join(tmpDir, file1),
+			filepath.Join(tmpDir, file2),
+			filepath.Join(tmpDir, "other.txt"),
+		}
+		if !slices.Equal(sources, want) {
+			t.Errorf("expected %v, got %v", want, sources)
 		}
 	})
 
@@ -165,6 +175,7 @@ func TestExpandGlobs(t *testing.T) {
 func TestExpandPathEdgeCases(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("TEST_DIR", tmpHome+"/test")
 
 	testCases := []struct {
