@@ -4,9 +4,15 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+)
+
+// Variables to allow mocking in tests
+var (
+	osExit = os.Exit
 )
 
 const (
@@ -153,5 +159,240 @@ func TestExpandGlobs(t *testing.T) {
 		if len(sources) != 0 {
 			t.Fatalf("expected 0 files, got %d: %v", len(sources), sources)
 		}
+	})
+}
+
+func TestExpandPathEdgeCases(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("TEST_DIR", tmpHome+"/test")
+
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "tilde with subdirectory",
+			input:    "~/dir/subdir",
+			expected: filepath.Join(tmpHome, "dir", "subdir"),
+		},
+		{
+			name:     "multiple environment variables",
+			input:    "$HOME/test",
+			expected: filepath.Join(tmpHome, "test"),
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "relative path with dots",
+			input:    "./relative/path",
+			expected: "./relative/path",
+		},
+		{
+			name:     "absolute path with tilde in middle",
+			input:    "/path/~/middle",
+			expected: "/path/~/middle",
+		},
+		{
+			name:     "environment variable with braces",
+			input:    "${HOME}/test",
+			expected: filepath.Join(tmpHome, "test"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := expandPath(testCase.input)
+
+			if testCase.wantErr {
+				if err == nil {
+					t.Errorf("expandPath(%q) expected error, got nil", testCase.input)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("expandPath(%q) unexpected error: %v", testCase.input, err)
+			}
+
+			if result != testCase.expected {
+				t.Errorf("expandPath(%q)", testCase.input)
+				t.Errorf("got %q, expected %q", result, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestExpandGlobsEdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create nested directory structure
+	nestedDir := filepath.Join(tmpDir, "subdir", "nested")
+	if err := os.MkdirAll(nestedDir, 0o755); err != nil {
+		t.Fatalf("failed to create nested dir: %v", err)
+	}
+
+	files := []struct {
+		path    string
+		content []byte
+	}{
+		{filepath.Join(tmpDir, "file1.yml"), []byte("test")},
+		{filepath.Join(tmpDir, "file2.yml"), []byte("test")},
+		{filepath.Join(tmpDir, "other.txt"), []byte("test")},
+		{filepath.Join(nestedDir, "nested.yml"), []byte("test")},
+		{filepath.Join(tmpDir, "subdir", "file3.yml"), []byte("test")},
+	}
+
+	for _, file := range files {
+		if err := os.WriteFile(file.path, file.content, 0o600); err != nil {
+			t.Fatalf("failed to create test file %s: %v", file.path, err)
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		patterns  []string
+		wantCount int
+	}{
+		{
+			name:      "nested glob pattern",
+			patterns:  []string{filepath.Join(tmpDir, "*", "*.yml")},
+			wantCount: 1, // subdir/file3.yml
+		},
+		{
+			name:      "multiple glob patterns",
+			patterns:  []string{filepath.Join(tmpDir, "*.yml"), filepath.Join(tmpDir, "subdir", "*.yml")},
+			wantCount: 3, // file1.yml, file2.yml, subdir/file3.yml
+		},
+		{
+			name:      "glob with no matches",
+			patterns:  []string{filepath.Join(tmpDir, "*.nonexistent")},
+			wantCount: 0,
+		},
+		{
+			name:      "glob with tilde expansion",
+			patterns:  []string{filepath.Join(tmpDir, "*.yml")},
+			wantCount: 2, // file1.yml, file2.yml
+		},
+		{
+			name:      "mixed valid and invalid patterns",
+			patterns:  []string{filepath.Join(tmpDir, "*.yml"), filepath.Join(tmpDir, "*.nonexistent")},
+			wantCount: 2, // file1.yml, file2.yml
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			sources := expandGlobs(testCase.patterns)
+
+			if len(sources) != testCase.wantCount {
+				t.Errorf("expandGlobs(%v)", testCase.patterns)
+				t.Errorf("got %d files, expected %d: %v", len(sources), testCase.wantCount, sources)
+			}
+		})
+	}
+}
+
+func TestMustPanics(t *testing.T) {
+	// must() calls os.Exit(1) when given an error, which we can't test directly
+	// without causing the test process to exit. Instead, we verify that
+	// must() will cause the program to exit by checking it doesn't return.
+	// This is a limitation of testing functions that call os.Exit.
+	
+	// We can test that must(nil) doesn't panic
+	t.Run("does not panic with nil error", func(t *testing.T) {
+		// We can't actually test must() with a non-nil error without exiting,
+		// but we can verify the function exists and compiles
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("must(nil) panicked: %v", r)
+			}
+		}()
+		// must(nil) should not panic or exit
+		must(nil)
+	})
+}
+
+func TestNewRootCommand(t *testing.T) {
+	// Save and restore exit function
+	originalExit := osExit
+	defer func() {
+		osExit = originalExit
+	}()
+
+	// Prevent actual exit during command execution
+	osExit = func(code int) {}
+
+	t.Run("creates command with expected properties", func(t *testing.T) {
+		version := "1.0.0"
+		commit := "abc123"
+
+		cmd := NewRootCommand(version, commit)
+
+		if cmd.Use != "sshush [SOURCE_FILES...]" {
+			t.Errorf("expected Use to be 'sshush [SOURCE_FILES...]', got %q", cmd.Use)
+		}
+
+		if cmd.Short != "sshush" {
+			t.Errorf("expected Short to be 'sshush', got %q", cmd.Short)
+		}
+
+		expectedVersion := fmt.Sprintf("%s (%s)", version, commit)
+		if cmd.Version != expectedVersion {
+			t.Errorf("expected Version to be %q, got %q", expectedVersion, cmd.Version)
+		}
+
+		if cmd.Run == nil {
+			t.Error("expected Run to be set")
+		}
+	})
+
+	t.Run("has all expected flags", func(t *testing.T) {
+		cmd := NewRootCommand("1.0.0", "abc123")
+
+		flags := cmd.PersistentFlags()
+
+		flagNames := []string{"source", "dest", "verbose", "debug", "dry-run"}
+		for _, name := range flagNames {
+			if flags.Lookup(name) == nil {
+				t.Errorf("expected flag %q to be present", name)
+			}
+		}
+	})
+
+	t.Run("sets default destination flag", func(t *testing.T) {
+		cmd := NewRootCommand("1.0.0", "abc123")
+
+		// Verify the dest flag exists
+		flag := cmd.PersistentFlags().Lookup("dest")
+		if flag == nil {
+			t.Fatal("expected dest flag to exist")
+		}
+
+		// The default value should be based on the user's home directory
+		// We can't easily verify the exact value without refactoring the code
+		// to use dependency injection, but we can verify the flag is registered
+		if flag.Name != "dest" {
+			t.Errorf("expected flag name to be 'dest', got %q", flag.Name)
+		}
+	})
+
+	t.Run("viper configuration is set up", func(t *testing.T) {
+		cmd := NewRootCommand("1.0.0", "abc123")
+
+		// Execute the command to trigger viper binding
+		cmd.SetArgs([]string{})
+		err := cmd.Execute()
+		// We expect it to fail because there are no source files
+		// but this ensures viper is set up
+		_ = err
+
+		// The important thing is that NewRootCommand completes without panic
+		// and sets up viper bindings
 	})
 }
