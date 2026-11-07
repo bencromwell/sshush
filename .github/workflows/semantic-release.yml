@@ -34,14 +34,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # semantic-release pushes the new tag with GITHUB_TOKEN, which never
+      # triggers other workflows, so the tag-driven goreleaser workflow will
+      # not fire; build the binaries here instead. Plain npx
+      # semantic-release exports no step outputs, so detect the release by
+      # the tag it leaves on the checked-out commit.
+      - name: Check whether a new release was published
+        id: released
+        run: |
+          if git describe --exact-match --tags --match 'v*' HEAD > /dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Go
-        if: env.NEW_RELEASE_PUBLISHED == 'true'
+        if: steps.released.outputs.published == 'true'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: stable
 
       - name: Build and publish binaries with GoReleaser
-        if: env.NEW_RELEASE_PUBLISHED == 'true'
+        if: steps.released.outputs.published == 'true'
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
