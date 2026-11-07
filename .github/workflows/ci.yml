@@ -47,11 +47,9 @@
         - name: Check coverage threshold
           run: |
             COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-            if (( $(echo "$COVERAGE < 85" | bc -l) )); then
-              echo "Coverage $COVERAGE% is below threshold 85%"
-              exit 1
-            fi
-            echo "Coverage $COVERAGE% meets threshold (>= 85%)"
+            echo "Coverage: $COVERAGE%"
+            # Use awk for comparison (more portable than bc)
+            awk "BEGIN {if ($COVERAGE < 85) {print \"FAIL: Coverage below 85%\" > \"/dev/stderr\"; exit 1} else {print \"PASS: Coverage meets threshold\"}}"
         - name: Upload coverage report to artifacts
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
