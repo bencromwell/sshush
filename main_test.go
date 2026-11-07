@@ -14,7 +14,7 @@ const (
 
 func TestRun(t *testing.T) {
 	// Set up a temporary home directory with .ssh subdirectory
-	// to avoid touching the real ~/.ssh/config in CI environments.
+	// to avoid touching the real ~/.ssh/config during tests.
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 
