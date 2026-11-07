@@ -38,11 +38,20 @@
         - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
           with:
             go-version-file: 'go.mod'
-        - name: Run tests
+        - name: Run tests with coverage
           run: make test
           env:
             TESTARGS: "-covermode=atomic -coverprofile=./coverage.out"
-        - run: go tool cover -html=coverage.out -o=coverage.html
+        - name: Generate coverage report
+          run: go tool cover -html=coverage.out -o=coverage.html
+        - name: Check coverage threshold
+          run: |
+            COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+            if (( $(echo "$COVERAGE < 85" | bc -l) )); then
+              echo "Coverage $COVERAGE% is below threshold 85%"
+              exit 1
+            fi
+            echo "Coverage $COVERAGE% meets threshold (>= 85%)"
         - name: Upload coverage report to artifacts
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:

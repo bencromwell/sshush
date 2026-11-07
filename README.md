@@ -1,5 +1,8 @@
 # sshush
 
+[![CI](https://github.com/bencromwell/sshush/actions/workflows/ci.yml/badge.svg)](https://github.com/bencromwell/sshush/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/bencromwell/sshush.svg)](https://pkg.go.dev/github.com/bencromwell/sshush)
+
 Full docs can be found here: https://sshush.bencromwell.com
 
 ## Intro
