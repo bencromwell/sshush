@@ -14,6 +14,15 @@ import (
 	"github.com/spf13/viper"
 )
 
+// longDescription documents how source files are collected: from the
+// sshush.yaml config file, the --source flag, and positional arguments.
+const longDescription = "sshush generates an SSH config file from YAML source files.\n\n" +
+	"Sources are collected from the sshush.yaml config file, the --source flag,\n" +
+	"and positional arguments. Passing --source replaces the config file's source\n" +
+	"list; positional arguments are always appended, so config sources and extra\n" +
+	"files combine: sshush --source a.yml b.yml reads a.yml and b.yml (plus any\n" +
+	"config sources when --source is not given)."
+
 func must(err error) {
 	if err != nil {
 		slog.Error("sshush", "error", err)
@@ -54,6 +63,7 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "sshush [SOURCE_FILES...]",
 		Short:   "sshush",
+		Long:    longDescription,
 		Version: fmt.Sprintf("%s (%s)", version, commit),
 		Run: func(cmd *cobra.Command, args []string) {
 			sources := collectSources(viper.GetStringSlice("source"), args)
@@ -82,7 +92,8 @@ func NewRootCommand(version, commit string) *cobra.Command {
 	homeDir, err := os.UserHomeDir()
 	must(err)
 
-	cmd.PersistentFlags().StringSlice("source", []string{}, "the source file(s) to read from")
+	cmd.PersistentFlags().StringSlice("source", []string{},
+		"the source file(s) to read from; additional files may be passed as positional arguments")
 	cmd.PersistentFlags().String("dest", homeDir+"/.ssh/config", "the destination path to write to")
 	cmd.PersistentFlags().BoolP("verbose", "V", false, "verbose output")
 	cmd.PersistentFlags().Bool("debug", false, "debug output")
