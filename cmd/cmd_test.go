@@ -63,8 +63,7 @@ func TestCollectSources(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			sources := testCase.flagSources
-			sources = append(sources, testCase.positionalArgs...)
+			sources := collectSources(testCase.flagSources, testCase.positionalArgs)
 
 			if len(sources) != len(testCase.wantSources) {
 				t.Errorf("got %d sources, want %d", len(sources), len(testCase.wantSources))

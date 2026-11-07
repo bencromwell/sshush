@@ -39,6 +39,16 @@ func expandPath(path string) (string, error) {
 	return path, nil
 }
 
+// collectSources merges --source flag values with positional arguments.
+// Values following a --source flag that it doesn't consume land in args,
+// so both must be combined to support "sshush --source a.yml b.yml".
+func collectSources(flagSources, args []string) []string {
+	sources := make([]string, 0, len(flagSources)+len(args))
+	sources = append(sources, flagSources...)
+
+	return append(sources, args...)
+}
+
 // NewRootCommand creates a new root command for sshush.
 func NewRootCommand(version, commit string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -46,9 +56,7 @@ func NewRootCommand(version, commit string) *cobra.Command {
 		Short:   "sshush",
 		Version: fmt.Sprintf("%s (%s)", version, commit),
 		Run: func(cmd *cobra.Command, args []string) {
-			sources := viper.GetStringSlice("source")
-			// Append positional arguments to sources
-			sources = append(sources, args...)
+			sources := collectSources(viper.GetStringSlice("source"), args)
 			dest := viper.GetString("dest")
 
 			fileSources := expandGlobs(sources)
