@@ -1,0 +1,8 @@
+---
+priority: 1
+---
+
+web_servers:
+  Hosts:
+    server1:
+      HostName: server1.example.com

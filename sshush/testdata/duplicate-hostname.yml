@@ -1,0 +1,9 @@
+---
+
+hosts:
+  server1:
+    HostName: server1.example.com
+    Port: 22
+  server1:
+    HostName: different.example.com
+    Port: 2222

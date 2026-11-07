@@ -1,0 +1,8 @@
+---
+priority: -5
+---
+
+low_priority:
+  Hosts:
+    server_neg:
+      HostName: server-negative.example.com
