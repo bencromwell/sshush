@@ -105,6 +105,9 @@ The project uses GitHub Actions for CI. Key workflows:
 - **Lint**: Runs `make lint` on all PRs
 - **Test**: Runs `go test ./...` on all PRs
 - **Build**: Builds binaries for releases
+- **Release**: Runs [semantic-release](https://semantic-release.gitbook.io/semantic-release/) on every push to `main`. It analyses conventional commits, determines the next version, and cuts a GitHub release; GoReleaser then builds and attaches the binaries. Pushing a `v*` tag manually still triggers GoReleaser directly.
+
+Because releases are driven by commit messages, [conventional commit style](#commit-messages) is required not just stylistically but functionally. Every commit type is release-eligible: `feat:` cuts a minor, `BREAKING CHANGE:` (or `!`) a major, and every other type — `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `style:`, `ci:`, `build:` — cuts a patch release, so a push to `main` always produces a release (unless the commit list is empty).
 
 All PRs must pass CI checks before merging.
 
