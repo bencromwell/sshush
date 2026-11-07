@@ -79,7 +79,11 @@ func (p *Parser) OrderSources(sources *SSHConfigSources) (*SSHConfigSources, err
 			})
 
 			if p.Debug {
-				_, _ = pp.Printf("Prioritised file: %s Priority: %d\n", sourceFileName, frontMatter.Priority)
+				_, _ = pp.Printf(
+					"Prioritised file: %s Priority: %d\n",
+					sourceFileName,
+					frontMatter.Priority,
+				)
 			}
 		}
 	}
@@ -127,6 +131,12 @@ func (p *Parser) Load(sources *SSHConfigSources) error {
 			return fmt.Errorf("unmarshalling yaml: %w", err)
 		}
 
+		// yaml.Unmarshal can set configMap to nil for empty documents.
+		// In that case, we need to reinitialize it to maintain consistency.
+		if configMap == nil {
+			configMap = orderedmap.New[string, any]()
+		}
+
 		// if global config exists in this source, set it and remove it.
 		p.extractAndSetConfig(configMap, &p.GlobalConfig, "global")
 
@@ -160,6 +170,7 @@ func (p *Parser) extractAndSetConfig(
 // @see https://sshush.bencromwell.com/docs/configuration/extends/
 func (p *Parser) extractExtensions() {
 	extensions := make(map[string]ExtendsConfig)
+
 	for pair := p.UnprocessedConfig.Oldest(); pair != nil; pair = pair.Next() {
 		configMap, ok := pair.Value.(map[string]any)
 		if !ok {

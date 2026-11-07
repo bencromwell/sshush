@@ -2,6 +2,7 @@
 package main
 
 import (
+	"io"
 	"log/slog"
 	"os"
 
@@ -15,13 +16,20 @@ var (
 	commit  = ""
 )
 
-func main() {
-	logger := slog.New(devslog.NewHandler(os.Stdout, nil))
+// Run is the main entry point logic extracted for testing.
+// It creates the root command and executes it with the given output writer.
+func Run(version, commit string, out io.Writer) error {
+	logger := slog.New(devslog.NewHandler(out, nil))
 	slog.SetDefault(logger)
 
 	rootCmd := cmd.NewRootCommand(version, commit)
 
-	err := rootCmd.Execute()
+	//nolint:wrapcheck // cmd.Execute() is from cobra, we can't wrap its errors meaningfully
+	return rootCmd.Execute()
+}
+
+func main() {
+	err := Run(version, commit, os.Stdout)
 	if err != nil {
 		slog.Error("%v\n", "error", err)
 		os.Exit(1)
