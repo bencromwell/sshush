@@ -195,13 +195,14 @@ func TestPriorityOrderWithMixedSources(t *testing.T) {
 	golden.Assert(t, generatedContents, "prioritised_mixed.golden")
 }
 
-// TestErrorScenarios tests various error conditions
+// TestErrorScenarios tests various error conditions.
 func TestErrorScenarios(t *testing.T) {
 	t.Run("permission denied on source file", func(t *testing.T) {
 		var buf bytes.Buffer
 
 		// Create a file with no read permissions
 		tmpDir := t.TempDir()
+
 		source := filepath.Join(tmpDir, "no-perms.yml")
 		if err := os.WriteFile(source, []byte("host: test"), 0o000); err != nil {
 			t.Skip("Cannot create file with no permissions (running as root?)")
@@ -240,7 +241,9 @@ func TestErrorScenarios(t *testing.T) {
 
 		// Create a directory with no write permissions
 		tmpDir := t.TempDir()
+
 		dest := filepath.Join(tmpDir, "no-write", "config")
+		//nolint:gosec // 0o555 is fine for test directories
 		if err := os.MkdirAll(filepath.Dir(dest), 0o555); err != nil {
 			t.Skip("Cannot create directory with no write permissions (running as root?)")
 		}
@@ -260,7 +263,7 @@ func TestErrorScenarios(t *testing.T) {
 	})
 }
 
-// TestParserEdgeCases tests edge cases in the parser
+// TestParserEdgeCases tests edge cases in the parser.
 func TestParserEdgeCases(t *testing.T) {
 	t.Run("empty config file", func(t *testing.T) {
 		var buf bytes.Buffer
@@ -313,7 +316,7 @@ func TestParserEdgeCases(t *testing.T) {
 	})
 }
 
-// TestPrioritySortingEdgeCases tests edge cases in priority sorting
+// TestPrioritySortingEdgeCases tests edge cases in priority sorting.
 func TestPrioritySortingEdgeCases(t *testing.T) {
 	t.Run("duplicate priorities", func(t *testing.T) {
 		var buf bytes.Buffer
@@ -366,9 +369,9 @@ func TestPrioritySortingEdgeCases(t *testing.T) {
 		var buf bytes.Buffer
 
 		sources := []string{
-			filepath.Join("testdata", "example.yml"),        // no priority (0)
+			filepath.Join("testdata", "example.yml"),           // no priority (0)
 			filepath.Join("testdata", "negative-priority.yml"), // priority -5
-			filepath.Join("testdata", "ciscos.yml"),         // no priority (0)
+			filepath.Join("testdata", "ciscos.yml"),            // no priority (0)
 		}
 
 		destination := filepath.Join("testdata", "mixed_priority.out")

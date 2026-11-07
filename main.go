@@ -24,6 +24,7 @@ func Run(version, commit string, out io.Writer) error {
 
 	rootCmd := cmd.NewRootCommand(version, commit)
 
+	//nolint:wrapcheck // cmd.Execute() is from cobra, we can't wrap its errors meaningfully
 	return rootCmd.Execute()
 }
 

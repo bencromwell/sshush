@@ -10,15 +10,16 @@ import (
 	"testing"
 )
 
-// Variables to allow mocking in tests
-var (
-	osExit = os.Exit
-)
-
 const (
 	file1 = "file1.yml"
 	file2 = "file2.yml"
 	file3 = "file3.yml"
+)
+
+// Variables to allow mocking in tests.
+var (
+	//nolint:gochecknoglobals // needed for testing os.Exit behavior
+	osExit = os.Exit
 )
 
 func TestCollectSources(t *testing.T) {
@@ -213,6 +214,7 @@ func TestExpandPathEdgeCases(t *testing.T) {
 				if err == nil {
 					t.Errorf("expandPath(%q) expected error, got nil", testCase.input)
 				}
+
 				return
 			}
 
@@ -233,6 +235,7 @@ func TestExpandGlobsEdgeCases(t *testing.T) {
 
 	// Create nested directory structure
 	nestedDir := filepath.Join(tmpDir, "subdir", "nested")
+	//nolint:gosec // 0o755 is fine for test directories
 	if err := os.MkdirAll(nestedDir, 0o755); err != nil {
 		t.Fatalf("failed to create nested dir: %v", err)
 	}
@@ -265,8 +268,11 @@ func TestExpandGlobsEdgeCases(t *testing.T) {
 			wantCount: 1, // subdir/file3.yml
 		},
 		{
-			name:      "multiple glob patterns",
-			patterns:  []string{filepath.Join(tmpDir, "*.yml"), filepath.Join(tmpDir, "subdir", "*.yml")},
+			name: "multiple glob patterns",
+			patterns: []string{
+				filepath.Join(tmpDir, "*.yml"),
+				filepath.Join(tmpDir, "subdir", "*.yml"),
+			},
 			wantCount: 3, // file1.yml, file2.yml, subdir/file3.yml
 		},
 		{
@@ -280,8 +286,11 @@ func TestExpandGlobsEdgeCases(t *testing.T) {
 			wantCount: 2, // file1.yml, file2.yml
 		},
 		{
-			name:      "mixed valid and invalid patterns",
-			patterns:  []string{filepath.Join(tmpDir, "*.yml"), filepath.Join(tmpDir, "*.nonexistent")},
+			name: "mixed valid and invalid patterns",
+			patterns: []string{
+				filepath.Join(tmpDir, "*.yml"),
+				filepath.Join(tmpDir, "*.nonexistent"),
+			},
 			wantCount: 2, // file1.yml, file2.yml
 		},
 	}
@@ -303,7 +312,7 @@ func TestMustPanics(t *testing.T) {
 	// without causing the test process to exit. Instead, we verify that
 	// must() will cause the program to exit by checking it doesn't return.
 	// This is a limitation of testing functions that call os.Exit.
-	
+
 	// We can test that must(nil) doesn't panic
 	t.Run("does not panic with nil error", func(t *testing.T) {
 		// We can't actually test must() with a non-nil error without exiting,
@@ -318,6 +327,7 @@ func TestMustPanics(t *testing.T) {
 	})
 }
 
+//nolint:gocognit // test function with multiple sub-tests
 func TestNewRootCommand(t *testing.T) {
 	// Save and restore exit function
 	originalExit := osExit
@@ -325,8 +335,8 @@ func TestNewRootCommand(t *testing.T) {
 		osExit = originalExit
 	}()
 
-	// Prevent actual exit during command execution
-	osExit = func(code int) {}
+	// Prevent actual exit during command execution.
+	osExit = func(_ int) {}
 
 	t.Run("creates command with expected properties", func(t *testing.T) {
 		version := "1.0.0"
@@ -382,7 +392,7 @@ func TestNewRootCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("viper configuration is set up", func(t *testing.T) {
+	t.Run("viper configuration is set up", func(_ *testing.T) {
 		cmd := NewRootCommand("1.0.0", "abc123")
 
 		// Execute the command to trigger viper binding
