@@ -42,11 +42,13 @@ func expandPath(path string) (string, error) {
 // NewRootCommand creates a new root command for sshush.
 func NewRootCommand(version, commit string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "sshush",
+		Use:     "sshush [SOURCE_FILES...]",
 		Short:   "sshush",
 		Version: fmt.Sprintf("%s (%s)", version, commit),
-		Run: func(cmd *cobra.Command, _ []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			sources := viper.GetStringSlice("source")
+			// Append positional arguments to sources
+			sources = append(sources, args...)
 			dest := viper.GetString("dest")
 
 			fileSources := expandGlobs(sources)
