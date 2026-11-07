@@ -329,7 +329,16 @@ func TestMustPanics(t *testing.T) {
 
 //nolint:gocognit // test function with multiple sub-tests
 func TestNewRootCommand(t *testing.T) {
-	// Save and restore exit function
+	// Set up a temporary home directory with .ssh subdirectory
+	// to avoid touching the real ~/.ssh/config in CI environments.
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	if err := os.MkdirAll(filepath.Join(tmpHome, ".ssh"), 0o700); err != nil {
+		t.Fatalf("failed to create .ssh dir: %v", err)
+	}
+
+	// Save and restore exit function.
 	originalExit := osExit
 	defer func() {
 		osExit = originalExit
@@ -378,31 +387,27 @@ func TestNewRootCommand(t *testing.T) {
 	t.Run("sets default destination flag", func(t *testing.T) {
 		cmd := NewRootCommand("1.0.0", "abc123")
 
-		// Verify the dest flag exists
+		// Verify the dest flag exists.
 		flag := cmd.PersistentFlags().Lookup("dest")
 		if flag == nil {
 			t.Fatal("expected dest flag to exist")
 		}
 
-		// The default value should be based on the user's home directory
-		// We can't easily verify the exact value without refactoring the code
-		// to use dependency injection, but we can verify the flag is registered
-		if flag.Name != "dest" {
-			t.Errorf("expected flag name to be 'dest', got %q", flag.Name)
+		// The default value should be based on the user's home directory.
+		expectedDefault := filepath.Join(tmpHome, ".ssh", "config")
+		if flag.DefValue != expectedDefault {
+			t.Errorf("expected default dest to be %q, got %q", expectedDefault, flag.DefValue)
 		}
 	})
 
 	t.Run("viper configuration is set up", func(_ *testing.T) {
 		cmd := NewRootCommand("1.0.0", "abc123")
 
-		// Execute the command to trigger viper binding
+		// Execute the command to trigger viper binding.
 		cmd.SetArgs([]string{})
 		err := cmd.Execute()
-		// We expect it to fail because there are no source files
-		// but this ensures viper is set up
+		// We expect it to fail because there are no source files,
+		// but this ensures viper is set up.
 		_ = err
-
-		// The important thing is that NewRootCommand completes without panic
-		// and sets up viper bindings
 	})
 }

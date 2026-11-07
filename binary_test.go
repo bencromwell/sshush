@@ -108,7 +108,16 @@ func TestBinaryNoArguments(t *testing.T) {
 	binaryPath := buildTestBinary(t)
 	defer os.Remove(binaryPath)
 
+	// Set HOME to a temp dir with .ssh subdirectory to avoid
+	// touching the real ~/.ssh/config in CI environments.
+	tmpHome := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tmpHome, ".ssh"), 0o700); err != nil {
+		t.Fatalf("failed to create .ssh dir: %v", err)
+	}
+
 	cmd := exec.CommandContext(context.Background(), binaryPath)
+
+	cmd.Env = append(os.Environ(), "HOME="+tmpHome)
 
 	output, err := cmd.CombinedOutput()
 

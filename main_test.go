@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,6 +13,15 @@ const (
 )
 
 func TestRun(t *testing.T) {
+	// Set up a temporary home directory with .ssh subdirectory
+	// to avoid touching the real ~/.ssh/config in CI environments.
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	if err := os.MkdirAll(filepath.Join(tmpHome, ".ssh"), 0o700); err != nil {
+		t.Fatalf("failed to create .ssh dir: %v", err)
+	}
+
 	t.Run("returns error when no arguments provided", func(_ *testing.T) {
 		var buf bytes.Buffer
 
