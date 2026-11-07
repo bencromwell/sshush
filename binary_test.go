@@ -16,6 +16,9 @@ const (
 	versionFlag = "--version"
 	helpFlag    = "--help"
 	invalidFlag = "--invalid-flag"
+	sourceFlag  = "--source"
+	sourceFileA = "a.yml"
+	sourceFileB = "b.yml"
 	fileMode    = 0o600
 )
 
@@ -65,7 +68,7 @@ func TestBinaryHelp(t *testing.T) {
 
 	// Help output should contain flags.
 	expectedFlags := []string{
-		"--source", "--dest", "--verbose", "--debug", "--dry-run", helpFlag, versionFlag,
+		sourceFlag, "--dest", "--verbose", "--debug", "--dry-run", helpFlag, versionFlag,
 	}
 	for _, flag := range expectedFlags {
 		if !strings.Contains(outputStr, flag) {
@@ -154,7 +157,7 @@ test:
 	cmd := exec.CommandContext(
 		context.Background(),
 		binaryPath,
-		"--source",
+		sourceFlag,
 		sourceFile,
 		"--dest",
 		destFile,
@@ -212,7 +215,7 @@ test:
 	cmd := exec.CommandContext(
 		context.Background(),
 		binaryPath,
-		"--source",
+		sourceFlag,
 		sourceFile,
 		"--dest",
 		filepath.Join(tmpDir, "config"),
@@ -232,6 +235,80 @@ test:
 		t.Error("expected destination file to NOT be created in dry-run mode")
 		// Clean up.
 		_ = os.Remove(destFile)
+	}
+}
+
+// TestBinarySourceCollection is an end-to-end regression test for
+// https://github.com/bencromwell/sshush/issues/10: multiple source files
+// must be accepted via positional args, a single --source flag followed by
+// more files, repeated --source flags, and comma-separated flag values.
+//
+//nolint:gocognit // table of invocation styles, each asserted the same way
+func TestBinarySourceCollection(t *testing.T) {
+	binaryPath := buildTestBinary(t)
+	defer os.Remove(binaryPath)
+
+	// Isolate HOME so viper doesn't pick up a real sshush.yaml and merge
+	// its sources into the result.
+	tmpHome := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tmpHome, ".ssh"), 0o700); err != nil {
+		t.Fatalf("failed to create .ssh dir: %v", err)
+	}
+
+	tmpDir := t.TempDir()
+
+	// Each file uses a distinct top-level group so both survive merging.
+	files := map[string]string{
+		sourceFileA: "groupa:\n  Hosts:\n    hosta:\n      HostName: host-a.example.com",
+		sourceFileB: "groupb:\n  Hosts:\n    hostb:\n      HostName: host-b.example.com",
+	}
+	for name, body := range files {
+		sshyaml := "---\n" + body + "\n"
+		if err := os.WriteFile(filepath.Join(tmpDir, name), []byte(sshyaml), fileMode); err != nil {
+			t.Fatalf("failed to create %s: %v", name, err)
+		}
+	}
+
+	hostnames := []string{"host-a.example.com", "host-b.example.com"}
+
+	testCases := []struct {
+		name string
+		args []string
+	}{
+		{"positional only", []string{sourceFileA, sourceFileB}},
+		{"flag plus trailing positional", []string{sourceFlag, sourceFileA, sourceFileB}},
+		{"repeated flags", []string{sourceFlag, sourceFileA, sourceFlag, sourceFileB}},
+		{"comma-separated flag value", []string{sourceFlag, sourceFileA + "," + sourceFileB}},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			destFile := filepath.Join(t.TempDir(), "config")
+			args := append([]string{"--dest", destFile}, testCase.args...)
+
+			cmd := exec.CommandContext(context.Background(), binaryPath, args...)
+			cmd.Dir = tmpDir
+
+			cmd.Env = append(os.Environ(), "HOME="+tmpHome)
+
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("failed to run sshush %v: %v\nOutput: %s",
+					testCase.args, err, string(output))
+			}
+
+			content, err := os.ReadFile(destFile)
+			if err != nil {
+				t.Fatalf("failed to read destination file: %v", err)
+			}
+
+			for _, hostname := range hostnames {
+				if !strings.Contains(string(content), hostname) {
+					t.Errorf("expected output for %v to contain %q, got:\n%s",
+						testCase.args, hostname, string(content))
+				}
+			}
+		})
 	}
 }
 
